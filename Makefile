@@ -3,9 +3,16 @@ PY := python3
 TARGET_DIR := apps/demo-target
 PW_DIR := frameworks/playwright-ts
 API_DIR := frameworks/api-python
+SELENIUM_DIR := frameworks/selenium-py
+SELFHEAL_DIR := ai-selfhealing
+PERF_K6_DIR := perf/k6
+PERF_LOCUST_DIR := perf/locust
+DBVAL_DIR := db-validation
+APPIUM_DIR := frameworks/appium-mobile
 
 .PHONY: help install target-up target-down test-tier-smoke test-tier-api test-tier-ui-e2e \
-        test-tier-regression tier-report ci docker-up docker-test-ui docker-test-api \
+        test-tier-regression tier-report selenium-test selfheal-test perf-smoke db-validate \
+        appium-collect ci docker-up docker-test-ui docker-test-api \
         docker-test-api-contracts docker-down clean
 
 help:
@@ -25,6 +32,11 @@ help:
 	@echo "  docker-test-api      Run api-python suite against compose target"
 	@echo "  docker-test-api-contracts  Run api-python contract tests in container"
 	@echo "  docker-down          Tear down compose stack"
+	@echo "  selenium-test        Selenium suite (smoke+regression) vs live target"
+	@echo "  selfheal-test        Self-healing engine pytest suite (offline)"
+	@echo "  perf-smoke           k6 + locust quick load runs vs live target"
+	@echo "  db-validate          DB validation suite against the demo target DB"
+	@echo "  appium-collect       Collect mobile tests (skips unless RUN_APPIUM=1)"
 
 install:
 	cd $(API_DIR) && pip install -r requirements.txt -r ../../apps/demo-target/requirements.txt
@@ -61,6 +73,23 @@ tier-report:
 	$(PY) strategy/scripts/tier_report.py \
 		strategy/fixtures/ui.xml strategy/fixtures/api.xml strategy/fixtures/newman.xml \
 		--budget ui=600 --budget api=300 --budget newman=120
+
+selenium-test: target-up
+	cd $(SELENIUM_DIR) && $(PY) -m pytest
+
+selfheal-test:
+	cd $(SELFHEAL_DIR) && PYTHONPATH=. $(PY) -m pytest
+
+perf-smoke: target-up
+	k6 run $(PERF_K6_DIR)/smoke.js || echo "k6 not installed; see $(PERF_K6_DIR)/README.md"
+	cd $(PERF_LOCUST_DIR) && locust -f locustfile.py --headless -u 5 -r 1 -t 20s \
+		--host http://127.0.0.1:8199
+
+db-validate: target-up
+	cd $(DBVAL_DIR) && $(PY) -m pytest
+
+appium-collect:
+	cd $(APPIUM_DIR) && $(PY) -m pytest --collect-only -q
 
 ci: target-up
 	cd $(TARGET_DIR) && $(PY) -m pytest tests

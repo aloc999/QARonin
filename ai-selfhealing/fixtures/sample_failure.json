@@ -1,0 +1,7 @@
+{
+  "selector": "#submit-order-btn",
+  "selector_type": "css",
+  "page_url": "http://127.0.0.1:8199/cart",
+  "action": "click checkout button",
+  "error": "TimeoutError: locator.click: Timeout 10000ms exceeded waiting for locator(\"#submit-order-btn\")"
+}

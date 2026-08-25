@@ -1,0 +1,56 @@
+{
+  "elements": [
+    {
+      "tag": "header",
+      "id": "site-header",
+      "classes": ["shop-header"],
+      "attributes": {"role": "banner"},
+      "text": "RONINSHOP",
+      "position": [0, 0],
+      "parent_tag": "body",
+      "unique": true
+    },
+    {
+      "tag": "button",
+      "id": "place-order-btn",
+      "classes": ["btn", "btn-accent"],
+      "attributes": {"type": "submit", "data-testid": "checkout-submit"},
+      "text": "Place order",
+      "position": [412, 640],
+      "parent_tag": "form",
+      "parent_classes": ["auth-form", "checkout-form"],
+      "unique": true
+    },
+    {
+      "tag": "a",
+      "id": "continue-shopping",
+      "classes": ["btn", "btn-ghost"],
+      "attributes": {"href": "/products"},
+      "text": "Continue shopping",
+      "position": [300, 640],
+      "parent_tag": "form",
+      "parent_classes": ["auth-form", "checkout-form"],
+      "unique": true
+    },
+    {
+      "tag": "input",
+      "id": "card-number",
+      "classes": [],
+      "attributes": {"type": "text", "value": "4242-0000-0000-0000"},
+      "text": "",
+      "position": [360, 520],
+      "parent_tag": "form",
+      "unique": true
+    },
+    {
+      "tag": "div",
+      "id": "cart-total",
+      "classes": ["totals-row"],
+      "attributes": {},
+      "text": "$29.50",
+      "position": [480, 430],
+      "parent_tag": "table",
+      "unique": true
+    }
+  ]
+}

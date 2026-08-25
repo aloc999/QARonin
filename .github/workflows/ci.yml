@@ -130,6 +130,88 @@ jobs:
           name: playwright-artifacts-smoke
           path: frameworks/playwright-ts/test-results/
 
+  selenium-tests:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frameworks/selenium-py
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: frameworks/selenium-py/requirements.txt
+      - name: Start demo target
+        run: |
+          pip install -r ../../apps/demo-target/requirements.txt
+          (cd ../../apps/demo-target && nohup python -m uvicorn app.main:app --host 127.0.0.1 --port 8199 > /tmp/target.log 2>&1 &)
+          for i in $(seq 1 30); do curl -sf http://127.0.0.1:8199/api/products && break || sleep 1; done
+      - run: pip install -r requirements.txt
+      - run: python -m pytest --junitxml=junit.xml
+
+  selfheal-tests:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ai-selfhealing
+    env:
+      OPENAI_API_KEY: ""
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install requests pytest
+      - run: PYTHONPATH=. python -m pytest
+
+  db-validation:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: db-validation
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: db-validation/requirements.txt
+      - name: Start demo target
+        run: |
+          pip install -r ../apps/demo-target/requirements.txt
+          (cd ../apps/demo-target && nohup python -m uvicorn app.main:app --host 127.0.0.1 --port 8199 > /tmp/target.log 2>&1 &)
+          for i in $(seq 1 30); do curl -sf http://127.0.0.1:8199/api/products && break || sleep 1; done
+      - run: pip install -r requirements.txt
+      - run: python -m pytest
+
+  locust-perf-nightly:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Start demo target
+        run: |
+          pip install -r apps/demo-target/requirements.txt
+          (cd apps/demo-target && nohup python -m uvicorn app.main:app --host 127.0.0.1 --port 8199 > /tmp/target.log 2>&1 &)
+          for i in $(seq 1 30); do curl -sf http://127.0.0.1:8199/api/products && break || sleep 1; done
+      - run: pip install locust
+      - name: Run Locust headless load profile
+        working-directory: perf/locust
+        run: |
+          locust -f locustfile.py --headless -u 10 -r 2 -t 2m \
+            --host http://127.0.0.1:8199 --csv report --html report.html
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: locust-report
+          path: |
+            perf/locust/report.csv
+            perf/locust/report.html
+
   nightly-regression:
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest

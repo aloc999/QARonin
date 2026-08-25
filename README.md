@@ -17,8 +17,15 @@ QARonin/
 ├── frameworks/
 │   ├── playwright-ts/        TypeScript Playwright framework (POM, storageState, tiers)
 │   ├── api-python/           pytest + requests API suite with JSON-schema contracts
-│   ├── selenium-py/          reserved for phase 2
-│   └── appium-mobile/        reserved for phase 2
+│   ├── selenium-py/          Selenium 4 + pytest suite (chrome/firefox/grid, same POM)
+│   └── appium-mobile/        Appium 2 + UiAutomator2 skeleton (emulator-gated)
+├── ai-selfhealing/           Agentic self-healing locator engine (offline heuristics
+│                             + optional LLM agent, CLI, JSONL audit trail)
+├── perf/
+│   ├── k6/                   SLO-as-code load scripts (checkout, API, smoke)
+│   └── locust/               Weighted-task Locust profile with custom CSV stats
+├── db-validation/            SQL data-validation framework (order integrity,
+│                             referential checks, RBAC-vs-DB, snapshots/diffs)
 ├── api/
 │   └── postman-newman/       Postman v2.1 collection with chained auth + Newman runner
 ├── strategy/
@@ -26,8 +33,9 @@ QARonin/
 │   ├── scripts/tier_report.py  JUnit XML duration/budget reporting
 │   ├── tests/                unit tests for the reporting logic
 │   └── fixtures/             real JUnit XMLs captured from actual runs
+├── docs/COMPARISON.md        gap analysis vs reference QA portfolios
 ├── docker/                   Dockerfiles + compose (target, postgres, test runners)
-└── .github/workflows/ci.yml  lint, PR gates, nightly cross-browser regression
+└── .github/workflows/        ci.yml (lint, PR gates, nightly), mobile.yml (emulator)
 ```
 
 ## Test tiers
@@ -56,6 +64,15 @@ make target-up                 # start RoninShop on http://127.0.0.1:8199
 cd frameworks/playwright-ts && npx playwright test    # UI suites (all browsers)
 cd frameworks/api-python && pytest                    # API suite incl. contracts
 cd api/postman-newman && npm test                     # Newman collection run
+
+make selenium-test             # Selenium 4 suite (smoke + regression markers)
+make selfheal-test             # self-healing engine tests + offline CLI demo
+make perf-smoke                # k6 smoke script + 20s Locust headless run
+make db-validate               # DB validation vs the live demo target's SQLite
+make appium-collect            # mobile suite collection (skips without RUN_APPIUM=1)
+python -m selfheal heal \      # self-healing CLI (offline heuristic mode)
+  --failure ai-selfhealing/fixtures/sample_failure.json \
+  --dom ai-selfhealing/fixtures/sample_dom.json
 ```
 
 ## Frameworks
@@ -66,6 +83,15 @@ cd api/postman-newman && npm test                     # Newman collection run
 | [frameworks/api-python](frameworks/api-python) | Python, pytest + requests-style client over ASGI | session fixtures, hand-rolled retry helper against /api/flaky, jsonschema contract validation per endpoint |
 | [api/postman-newman](api/postman-newman) | Postman Collection v2.1 + Newman | chained login-token flow via collection variables, pm.test assertions, response-time budgets, junit output |
 | [apps/demo-target](apps/demo-target) | FastAPI, SQLAlchemy, SQLite | seeded catalog/users/orders, HMAC-signed tokens, admin RBAC, 30%-failure /api/flaky for retry demos |
+| [frameworks/selenium-py](frameworks/selenium-py) | Python, Selenium 4 + pytest | same POM contract as playwright-ts, explicit-wait wrapper (no sleeps), chrome/firefox headless via Selenium Manager, Grid via SELENIUM_REMOTE_URL, @smoke/@regression markers |
+| [ai-selfhealing](ai-selfhealing/README.md) | Python, requests (LLM optional) | multi-signal offline locator scoring, pluggable OpenAI-compatible agent with graceful fallback, ranked candidates + confidence + rationale, JSONL healing report, CLI |
+| [perf/k6](perf/k6/README.md) | k6 (JS) | SLO-as-code thresholds as CI gates (p95<800ms reads, p95<1200ms orders, <1% errors), staged ramp profiles |
+| [perf/locust](perf/locust/README.md) | Locust (Python) | weighted tasks (60% browse / 25% cart / 10% login / 5% order), 1-3s think time, custom stats CSV listeners |
+| [db-validation](db-validation) | Python, SQLAlchemy 2.x + pytest | order integrity via SQL aggregation vs API-created rows, orphan-FK checks, RBAC-vs-database consistency, seed quality rules, snapshot/diff mutation detection |
+| [frameworks/appium-mobile](frameworks/appium-mobile/README.md) | Python, Appium 2 + UiAutomator2 | emulator-gated suite (RUN_APPIUM=1 else clean skips), caps factory, wdio native demo app flows, dedicated emulator workflow |
+
+See [docs/COMPARISON.md](docs/COMPARISON.md) for an honest capability gap
+analysis against reference QA portfolios.
 
 ## Demo credentials
 
@@ -76,10 +102,10 @@ cd api/postman-newman && npm test                     # Newman collection run
 
 ## Roadmap
 
-Phase 2 modules:
+Phase 2 delivered: selenium-py, appium-mobile, ai-selfhealing, perf (k6 +
+Locust), db-validation, and docs/COMPARISON.md.
 
-- `frameworks/selenium-py` - Selenium WebDriver parity suite with grid support
-- `frameworks/appium-mobile` - mobile automation against a companion app
-- `ai-self-healing` - locator self-healing experiments using the flaky endpoint
-- `k6` / `locust` - performance tiers (L4) with load profiles per endpoint
-- `db-validation` - postgres-backed data-integrity checks using the compose service
+Phase 3 candidates (see COMPARISON.md): Pact contract testing against the
+demo target API, Karate as an additional API layer feeding the tier budget
+report, an LLM-eval harness reusing the self-healing agent plumbing,
+Terraform provisioning for cloud runners, and a Cypress parity suite.

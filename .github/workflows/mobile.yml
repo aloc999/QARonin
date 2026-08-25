@@ -1,0 +1,68 @@
+name: mobile
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 5 * * 1"
+
+jobs:
+  appium-android:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    defaults:
+      run:
+        working-directory: frameworks/appium-mobile
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: frameworks/appium-mobile/requirements.txt
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Enable KVM group perms (hardware acceleration)
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Download WebdriverIO native demo APK
+        run: |
+          curl -sL https://api.github.com/repos/webdriverio/native-demo-app/releases/latest \
+            | grep browser_download_url | grep android | cut -d '"' -f 4 \
+            | xargs curl -sL -o demo-app.apk
+          ls -la demo-app.apk
+
+      - name: Install Appium server and UiAutomator2 driver
+        run: |
+          npm install -g appium
+          appium driver install uiautomator2
+          nohup appium --relaxed-security > /tmp/appium.log 2>&1 &
+          for i in $(seq 1 30); do curl -sf http://127.0.0.1:4723/status && break || sleep 1; done
+
+      - name: Boot Android emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 30
+          arch: x86_64
+          script: echo "Emulator booted"
+
+      - name: Run mobile suite
+        env:
+          RUN_APPIUM: "1"
+          APPIUM_SERVER_URL: http://127.0.0.1:4723
+          APPIUM_APP_PATH: ${{ github.workspace }}/frameworks/appium-mobile/demo-app.apk
+        run: python -m pytest -v --junitxml=junit.xml
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: appium-failure-artifacts
+          path: |
+            frameworks/appium-mobile/screenshots/
+            /tmp/appium.log

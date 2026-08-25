@@ -1,0 +1,61 @@
+# k6 v1.4.0 (linux-amd64 binary downloaded from grafana releases)
+
+# $ /tmp/opencode k6 inspect perf/k6/api.js
+## thresholds listed:
+  "thresholds": {
+    "checks": [
+      "rate\u003e0.99"
+    ],
+    "http_req_duration{name:order_create}": [
+      "p(95)\u003c1200"
+    ],
+    "http_req_duration{name:products}": [
+      "p(95)\u003c800"
+    ],
+    "http_req_failed": [
+      "rate\u003c0.01"
+    ]
+
+# $ k6 run perf/k6/smoke.js  (exit 0)
+    http_req_duration..............: avg=2.41ms min=1.57ms med=2.3ms  max=9.82ms p(90)=2.98ms p(95)=3.32ms
+      { expected_response:true }...: avg=2.41ms min=1.57ms med=2.3ms  max=9.82ms p(90)=2.98ms p(95)=3.32ms
+    http_req_failed................: 0.00%  0 out of 1958
+    http_reqs......................: 1958   391.494268/s
+
+    EXECUTION
+    iteration_duration.............: avg=2.53ms min=1.64ms med=2.41ms max=9.94ms p(90)=3.13ms p(95)=3.5ms 
+    iterations.....................: 1958   391.494268/s
+    vus............................: 1      min=1         max=1
+    vus_max........................: 1      min=1         max=1
+
+    NETWORK
+    data_received..................: 2.2 MB 434 kB/s
+    data_sent......................: 161 kB 32 kB/s
+
+
+
+
+running (05.0s), 0/1 VUs, 1958 complete and 0 interrupted iterations
+default ✓ [ 100% ] 1 VUs  5s
+
+# $ k6 run --duration 15s perf/k6/smoke.js (exit 0)
+    http_req_duration..............: avg=2.55ms min=1.55ms med=2.38ms max=12.74ms p(90)=3.31ms p(95)=3.81ms
+      { expected_response:true }...: avg=2.55ms min=1.55ms med=2.38ms max=12.74ms p(90)=3.31ms p(95)=3.81ms
+    http_req_failed................: 0.00%  0 out of 5564
+    http_reqs......................: 5564   370.880761/s
+
+    EXECUTION
+    iteration_duration.............: avg=2.67ms min=1.62ms med=2.51ms max=12.89ms p(90)=3.47ms p(95)=3.97ms
+    iterations.....................: 5564   370.880761/s
+    vus............................: 1      min=1         max=1
+    vus_max........................: 1      min=1         max=1
+
+    NETWORK
+    data_received..................: 6.2 MB 411 kB/s
+    data_sent......................: 456 kB 30 kB/s
+
+
+
+
+running (15.0s), 0/1 VUs, 5564 complete and 0 interrupted iterations
+default ✓ [ 100% ] 1 VUs  15s

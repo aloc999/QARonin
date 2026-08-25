@@ -40,7 +40,7 @@ def seed(db_url: str = "sqlite:///./roninshop.db"):
             username="demo",
             created_at=now - timedelta(hours=3),
             status="confirmed",
-            total=79.24,
+            total=85.73,
         )
         db.add(order)
         db.flush()
