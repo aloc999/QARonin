@@ -1,5 +1,8 @@
 # QARonin
 
+![ci](https://github.com/aloc999/QARonin/actions/workflows/ci.yml/badge.svg)
+![mobile](https://github.com/aloc999/QARonin/actions/workflows/mobile.yml/badge.svg)
+
 QARonin is a flagship QA engineering portfolio: a monorepo where a realistic
 e-commerce system under test ("RoninShop") is exercised by multiple
 professional test frameworks, organized under one multi-tier execution
