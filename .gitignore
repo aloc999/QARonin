@@ -1,0 +1,39 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.venv/
+venv/
+
+# Node
+node_modules/
+package-lock.json.bak
+
+# Playwright artifacts
+test-results/
+playwright-report/
+**/playwright/.auth/
+blob-report/
+trace.zip
+
+# JUnit / test reports
+junit.xml
+newman-report.xml
+newman-report.html
+
+# Databases
+*.db
+*.db-shm
+*.db-wal
+*.sqlite3
+
+# Environment
+.env
+.env.*
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}Cart - RoninShop{% endblock %}
+{% block content %}
+<div class="flash" id="flash"></div>
+<div id="cart-empty" style="display:none">
+  <h1>Your cart</h1>
+  <p style="color:#6b7280">Your cart is empty. <a href="/products">Browse products</a>.</p>
+</div>
+<div id="cart-view" style="display:none">
+  <h1>Your cart</h1>
+  <table id="cart-table">
+    <thead>
+      <tr><th>Product</th><th>Qty</th><th>Unit price</th><th>Line total</th><th></th></tr>
+    </thead>
+    <tbody></tbody>
+    <tfoot>
+      <tr class="totals-row"><td colspan="3">Total</td><td id="cart-total">$0.00</td><td></td></tr>
+    </tfoot>
+  </table>
+  <form class="auth-form" id="checkout-form" style="margin-top:1.5rem; max-width:520px">
+    <h2 style="font-size:1.1rem">Checkout</h2>
+    <label for="card-name">Name on card</label>
+    <input type="text" id="card-name" value="Demo Customer">
+    <label for="card-number">Card number (fake)</label>
+    <input type="text" id="card-number" value="4242-0000-0000-0000">
+    <label for="address">Shipping address</label>
+    <input type="text" id="address" value="1 Ronin Way, Kyoto">
+    <div class="row-actions">
+      <a href="/products" class="btn btn-ghost">Continue shopping</a>
+      <button type="submit" class="btn btn-accent" id="place-order-btn">Place order</button>
+    </div>
+  </form>
+</div>
+<div id="order-confirmation" class="order-confirm" style="display:none">
+  <h2>Order confirmed</h2>
+  <p>Thank you. Your order number is</p>
+  <div class="oid" id="order-id">#?</div>
+  <p>Total charged: <strong id="order-total"></strong></p>
+  <a href="/products" class="btn btn-accent" style="display:inline-block;margin-top:1rem">Keep shopping</a>
+</div>
+{% endblock %}

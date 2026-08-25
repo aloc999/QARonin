@@ -1,0 +1,13 @@
+{
+  "name": "@qaronin/postman-newman",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "test": "newman run postman_collection.json -e postman_environment.json --reporters cli,junit --reporter-junit-export newman-report.xml",
+    "test:html": "newman run postman_collection.json -e postman_environment.json --reporters cli,junit,htmlextra --reporter-junit-export newman-report.xml --reporter-htmlextra-export newman-report.html"
+  },
+  "devDependencies": {
+    "newman": "^6.2.1",
+    "newman-reporter-htmlextra": "^1.23.0"
+  }
+}

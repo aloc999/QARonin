@@ -1,0 +1,11 @@
+{
+  "type": "object",
+  "required": ["id", "name", "description", "price", "stock"],
+  "properties": {
+    "id": {"type": "integer"},
+    "name": {"type": "string", "minLength": 1},
+    "description": {"type": "string"},
+    "price": {"type": "number", "exclusiveMinimum": 0},
+    "stock": {"type": "integer", "minimum": 0}
+  }
+}

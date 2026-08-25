@@ -1,0 +1,167 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: "0 3 * * *"
+  workflow_dispatch:
+
+env:
+  BASE_URL: http://127.0.0.1:8199
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Validate JSON artifacts
+        run: |
+          python3 -m json.tool api/postman-newman/postman_collection.json > /dev/null
+          python3 -m json.tool api/postman-newman/postman_environment.json > /dev/null
+      - name: Syntax-check python scripts
+        run: python3 -m py_compile strategy/scripts/tier_report.py
+      - name: Validate compose config
+        run: docker compose -f docker/docker-compose.yml config --quiet
+
+  target-tests:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/demo-target
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - run: python -m pytest tests --junitxml=junit.xml
+
+  api-tests:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: qaronin
+          POSTGRES_PASSWORD: qaronin-dev-only
+          POSTGRES_DB: qaronin
+        ports:
+          - 55432:5432
+        options: >-
+          --health-cmd "pg_isready -U qaronin"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    defaults:
+      run:
+        working-directory: frameworks/api-python
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Start demo target
+        run: |
+          pip install -r ../../apps/demo-target/requirements.txt
+          cd ../../apps/demo-target
+          nohup python -m uvicorn app.main:app --host 127.0.0.1 --port 8199 > /tmp/target.log 2>&1 &
+          for i in $(seq 1 30); do curl -sf http://127.0.0.1:8199/api/products && break || sleep 1; done
+      - run: pip install -r requirements.txt
+      - run: python -m pytest --junitxml=junit.xml
+
+  postman-newman:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: api/postman-newman
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: api/postman-newman/package-lock.json
+      - name: Start demo target
+        run: |
+          pip install -r ../../apps/demo-target/requirements.txt
+          (cd ../../apps/demo-target && nohup python -m uvicorn app.main:app --host 127.0.0.1 --port 8199 > /tmp/target.log 2>&1 &)
+          for i in $(seq 1 30); do curl -sf http://127.0.0.1:8199/api/products && break || sleep 1; done
+      - run: npm ci
+      - run: npm test
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: newman-report
+          path: api/postman-newman/newman-report.xml
+
+  playwright-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: frameworks/playwright-ts/package-lock.json
+      - name: Start demo target
+        run: |
+          pip install -r apps/demo-target/requirements.txt
+          (cd apps/demo-target && nohup python -m uvicorn app.main:app --host 127.0.0.1 --port 8199 > /tmp/target.log 2>&1 &)
+          for i in $(seq 1 30); do curl -sf http://127.0.0.1:8199/api/products && break || sleep 1; done
+      - name: Install dependencies
+        working-directory: frameworks/playwright-ts
+        run: npm ci
+      - name: Install browsers
+        working-directory: frameworks/playwright-ts
+        run: npx playwright install chromium firefox --with-deps
+      - name: Run smoke tier (L0 gate)
+        working-directory: frameworks/playwright-ts
+        run: npx playwright test --grep @smoke
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-artifacts-smoke
+          path: frameworks/playwright-ts/test-results/
+
+  nightly-regression:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, firefox]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: frameworks/playwright-ts/package-lock.json
+      - name: Start demo target
+        run: |
+          pip install -r apps/demo-target/requirements.txt
+          (cd apps/demo-target && nohup python -m uvicorn app.main:app --host 127.0.0.1 --port 8199 > /tmp/target.log 2>&1 &)
+          for i in $(seq 1 30); do curl -sf http://127.0.0.1:8199/api/products && break || sleep 1; done
+      - name: Install dependencies
+        working-directory: frameworks/playwright-ts
+        run: npm ci
+      - name: Install browsers
+        working-directory: frameworks/playwright-ts
+        run: npx playwright install chromium firefox --with-deps
+      - name: Full UI suite on ${{ matrix.browser }}
+        working-directory: frameworks/playwright-ts
+        run: npx playwright test --project=${{ matrix.browser }}
+      - name: Tier budget report
+        run: |
+          python3 strategy/scripts/tier_report.py \
+            frameworks/playwright-ts/junit.xml \
+            frameworks/api-python/junit.xml \
+            api/postman-newman/newman-report.xml \
+            --budget ui=600 --budget api=300 --budget newman=120

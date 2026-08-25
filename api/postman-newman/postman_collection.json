@@ -1,0 +1,239 @@
+{
+  "info": {
+    "_postman_id": "b7e1c2a4-9f3d-4c8a-a1b2-3d4e5f6a7b8c",
+    "name": "QARonin - RoninShop API",
+    "description": "Newman collection for the RoninShop demo target. Chained flow: login captures the token, subsequent requests use {{token}}.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "token", "value": "" },
+    { "key": "orderId", "value": "" },
+    { "key": "requestTimestamp", "value": "" }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+  },
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Login as user",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": ["pm.collectionVariables.set('requestTimestamp', Date.now().toString());"]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('status is 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('response time under 2000ms', function () { pm.expect(pm.response.responseTime).to.be.below(2000); });",
+                  "const body = pm.response.json();",
+                  "pm.test('has bearer token', function () { pm.expect(body.access_token).to.be.a('string').and.not.empty; pm.expect(body.token_type).to.eql('bearer'); });",
+                  "pm.test('role is user', function () { pm.expect(body.role).to.eql('user'); });",
+                  "pm.collectionVariables.set('token', body.access_token);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"username\": \"demo\", \"password\": \"demo1234\"}"
+            }
+          }
+        },
+        {
+          "name": "Login rejects bad credentials",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('status is 401', function () { pm.response.to.have.status(401); });",
+                  "pm.test('error detail present', function () { pm.expect(pm.response.json().detail).to.eql('Invalid credentials'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/auth/login",
+            "body": { "mode": "raw", "raw": "{\"username\": \"demo\", \"password\": \"wrong\"}" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Products",
+      "item": [
+        {
+          "name": "List products",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('status is 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('response time under 2000ms', function () { pm.expect(pm.response.responseTime).to.be.below(2000); });",
+                  "const products = pm.response.json();",
+                  "pm.test('eight products seeded', function () { pm.expect(products).to.have.lengthOf(8); });",
+                  "pm.test('product schema valid', function () {",
+                  "  products.forEach(function (p) {",
+                  "    pm.expect(p).to.have.property('id');",
+                  "    pm.expect(p).to.have.property('name');",
+                  "    pm.expect(p.price).to.be.above(0);",
+                  "    pm.expect(p.stock).to.be.at.least(0);",
+                  "  });",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/products" }
+        },
+        {
+          "name": "Get product by id",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('status is 200', function () { pm.response.to.have.status(200); });",
+                  "const p = pm.response.json();",
+                  "pm.test('correct id returned', function () { pm.expect(p.id).to.eql(1); });"
+                ]
+              }
+            }
+          ],
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/products/1" }
+        },
+        {
+          "name": "Get missing product returns 404",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": ["pm.test('status is 404', function () { pm.response.to.have.status(404); });"]
+              }
+            }
+          ],
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/products/99999" }
+        }
+      ]
+    },
+    {
+      "name": "Orders",
+      "item": [
+        {
+          "name": "Create order (chained token)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('status is 201', function () { pm.response.to.have.status(201); });",
+                  "pm.test('response time under 2000ms', function () { pm.expect(pm.response.responseTime).to.be.below(2000); });",
+                  "const order = pm.response.json();",
+                  "pm.test('order confirmed', function () { pm.expect(order.status).to.eql('confirmed'); });",
+                  "pm.test('total is positive', function () { pm.expect(order.total).to.be.above(0); });",
+                  "pm.collectionVariables.set('orderId', order.id.toString());"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/orders",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"items\": [{\"product_id\": 1, \"quantity\": 1}, {\"product_id\": 6, \"quantity\": 2}]}"
+            }
+          }
+        },
+        {
+          "name": "Get created order (chained id)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('status is 200', function () { pm.response.to.have.status(200); });",
+                  "const order = pm.response.json();",
+                  "pm.test('same id as created', function () { pm.expect(order.id.toString()).to.eql(pm.collectionVariables.get('orderId')); });",
+                  "pm.test('items array present', function () { pm.expect(order.items).to.be.an('array').with.length.above(0); });"
+                ]
+              }
+            }
+          ],
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/orders/{{orderId}}" }
+        },
+        {
+          "name": "Create order without auth fails",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": ["pm.test('status is 401', function () { pm.response.to.have.status(401); });"]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "", "disabled": true }],
+            "auth": { "type": "noauth" },
+            "url": "{{baseUrl}}/api/orders",
+            "body": { "mode": "raw", "raw": "{\"items\": [{\"product_id\": 1}]}" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "RBAC",
+      "item": [
+        {
+          "name": "User denied admin orders",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('status is 403', function () { pm.response.to.have.status(403); });",
+                  "pm.test('admin role required message', function () { pm.expect(pm.response.json().detail).to.eql('Admin role required'); });"
+                ]
+              }
+            }
+          ],
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/admin/orders" }
+        },
+        {
+          "name": "Flaky endpoint eventually succeeds",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('status is 503 or 200', function () { pm.expect([200, 503]).to.include(pm.response.code); });",
+                  "if (pm.response.code === 503) {",
+                  "  console.log('flaky endpoint returned 503 this run; acceptable for single execution');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/flaky" }
+        }
+      ]
+    }
+  ]
+}

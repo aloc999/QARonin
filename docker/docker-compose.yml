@@ -1,0 +1,70 @@
+services:
+  target:
+    build:
+      context: ../apps/demo-target
+      dockerfile: ../../docker/Dockerfile.target
+    ports:
+      - "8199:8199"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8199/api/products')"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: qaronin
+      POSTGRES_PASSWORD: qaronin-dev-only
+      POSTGRES_DB: qaronin
+    ports:
+      - "55432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U qaronin -d qaronin"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  ui-tests:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.ui-tests
+    profiles: ["ui"]
+    depends_on:
+      target:
+        condition: service_healthy
+    environment:
+      BASE_URL: http://target:8199
+
+  api-tests:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.api-tests
+    profiles: ["api", "contracts"]
+    depends_on:
+      target:
+        condition: service_healthy
+    environment:
+      BASE_URL: http://target:8199
+
+  newman:
+    image: postman/newman:alpine
+    profiles: ["newman"]
+    working_dir: /work
+    volumes:
+      - ../api/postman-newman:/work:ro
+    entrypoint: ["newman"]
+    command:
+      run postman_collection.json
+      -e postman_environment.json
+      --reporters cli,junit
+      --reporter-junit-export /tmp/newman-report.xml
+    depends_on:
+      target:
+        condition: service_healthy
+
+volumes:
+  pgdata:

@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}Products - RoninShop{% endblock %}
+{% block content %}
+<div class="flash ok" id="flash"></div>
+<h1>Products</h1>
+<div class="grid" id="product-grid">
+  {% for p in products %}
+  <article class="card product" data-product-id="{{ p.id }}" data-price="{{ p.price }}">
+    <div class="card-art">{{ ["🗡", "🪨", "🍵", "🍱", "🖌", "📄", "🌿", "🐱"][loop.index0 % 8] }}</div>
+    <div class="card-body">
+      <h3>{{ p.name }}</h3>
+      <p>{{ p.description }}</p>
+      <span class="price">${{ "%.2f"|format(p.price) }}</span>
+      <button class="btn btn-accent add-to-cart" data-id="{{ p.id }}" data-name="{{ p.name }}">Add to cart</button>
+    </div>
+  </article>
+  {% endfor %}
+</div>
+{% endblock %}

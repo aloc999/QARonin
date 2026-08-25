@@ -1,0 +1,13 @@
+FROM mcr.microsoft.com/playwright:v1.56.1-noble
+
+RUN mkdir /work && chown -R pwuser:pwuser /work
+USER pwuser
+WORKDIR /work
+
+COPY --chown=pwuser:pwuser frameworks/playwright-ts/package.json frameworks/playwright-ts/package-lock.json* ./
+RUN npm install
+
+COPY --chown=pwuser:pwuser frameworks/playwright-ts ./
+
+ENV BASE_URL=http://target:8199
+CMD ["npx", "playwright", "test"]

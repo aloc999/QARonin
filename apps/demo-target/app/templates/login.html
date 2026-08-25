@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}Login - RoninShop{% endblock %}
+{% block content %}
+<form class="auth-form" id="login-form">
+  <h1>Sign in</h1>
+  <div class="flash err" id="login-error"></div>
+  <label for="username">Username</label>
+  <input type="text" id="username" name="username" autocomplete="username">
+  <label for="password">Password</label>
+  <input type="password" id="password" name="password" autocomplete="current-password">
+  <div class="row-actions">
+    <button type="submit" class="btn btn-accent">Sign in</button>
+  </div>
+  <p class="hint">Demo credentials: demo / demo1234 (admin / admin1234)</p>
+</form>
+{% endblock %}
+{% block scripts %}
+<script>
+document.getElementById("login-form").addEventListener("submit", async function (e) {
+  e.preventDefault();
+  const errBox = document.getElementById("login-error");
+  errBox.className = "flash";
+  const res = await fetch("/api/auth/login", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      username: document.getElementById("username").value,
+      password: document.getElementById("password").value,
+    }),
+  });
+  if (!res.ok) {
+    errBox.textContent = "Invalid username or password.";
+    errBox.className = "flash err";
+    return;
+  }
+  const data = await res.json();
+  localStorage.setItem("token", data.access_token);
+  localStorage.setItem("username", data.username);
+  localStorage.setItem("role", data.role);
+  window.location.href = "/products";
+});
+</script>
+{% endblock %}

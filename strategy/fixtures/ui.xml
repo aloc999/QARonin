@@ -1,0 +1,59 @@
+<testsuites id="" name="" tests="17" failures="0" skipped="0" errors="0" time="48.858630000000005">
+<testsuite name="global-setup.ts" timestamp="2026-08-25T22:37:06.911Z" hostname="setup" tests="1" failures="0" skipped="0" time="0.041" errors="0">
+<testcase name="authenticate via API and save storage state" classname="global-setup.ts" time="0.041">
+</testcase>
+</testsuite>
+<testsuite name="e2e-purchase.spec.ts" timestamp="2026-08-25T22:37:06.911Z" hostname="chromium" tests="1" failures="0" skipped="0" time="0.763" errors="0">
+<testcase name="@e2e full purchase flow: add two items, checkout, order id shown" classname="e2e-purchase.spec.ts" time="0.763">
+</testcase>
+</testsuite>
+<testsuite name="regression.spec.ts" timestamp="2026-08-25T22:37:06.911Z" hostname="chromium" tests="4" failures="0" skipped="0" time="33.08" errors="0">
+<testcase name="Regression › @regression flaky endpoint eventually succeeds with retry-with-backoff" classname="regression.spec.ts" time="12.019">
+</testcase>
+<testcase name="Regression › @regression admin RBAC negative check via UI session" classname="regression.spec.ts" time="19.682">
+</testcase>
+<testcase name="Regression › @regression cart persists across reload" classname="regression.spec.ts" time="0.871">
+</testcase>
+<testcase name="Regression › @regression logout clears session and redirects to login" classname="regression.spec.ts" time="0.508">
+</testcase>
+</testsuite>
+<testsuite name="smoke.spec.ts" timestamp="2026-08-25T22:37:06.911Z" hostname="chromium" tests="3" failures="0" skipped="0" time="36.231" errors="0">
+<testcase name="Smoke › @smoke product grid loads with seeded items" classname="smoke.spec.ts" time="0.455">
+</testcase>
+<testcase name="Smoke › @smoke add to cart increments badge" classname="smoke.spec.ts" time="35.157">
+<system-out>
+<![CDATA[
+[[ATTACHMENT|test-results/smoke-Smoke-smoke-add-to-cart-increments-badge-chromium/video.webm]]
+
+[[ATTACHMENT|test-results/smoke-Smoke-smoke-add-to-cart-increments-badge-chromium/error-context.md]]
+
+[[ATTACHMENT|test-results/smoke-Smoke-smoke-add-to-cart-increments-badge-chromium-retry1/trace.zip]]
+]]>
+</system-out>
+</testcase>
+<testcase name="Smoke › @smoke login with invalid credentials shows error" classname="smoke.spec.ts" time="0.619">
+</testcase>
+</testsuite>
+<testsuite name="e2e-purchase.spec.ts" timestamp="2026-08-25T22:37:06.911Z" hostname="firefox" tests="1" failures="0" skipped="0" time="3.239" errors="0">
+<testcase name="@e2e full purchase flow: add two items, checkout, order id shown" classname="e2e-purchase.spec.ts" time="3.239">
+</testcase>
+</testsuite>
+<testsuite name="regression.spec.ts" timestamp="2026-08-25T22:37:06.911Z" hostname="firefox" tests="4" failures="0" skipped="0" time="8.599" errors="0">
+<testcase name="Regression › @regression flaky endpoint eventually succeeds with retry-with-backoff" classname="regression.spec.ts" time="3.975">
+</testcase>
+<testcase name="Regression › @regression admin RBAC negative check via UI session" classname="regression.spec.ts" time="1.559">
+</testcase>
+<testcase name="Regression › @regression cart persists across reload" classname="regression.spec.ts" time="1.936">
+</testcase>
+<testcase name="Regression › @regression logout clears session and redirects to login" classname="regression.spec.ts" time="1.129">
+</testcase>
+</testsuite>
+<testsuite name="smoke.spec.ts" timestamp="2026-08-25T22:37:06.911Z" hostname="firefox" tests="3" failures="0" skipped="0" time="5.424" errors="0">
+<testcase name="Smoke › @smoke product grid loads with seeded items" classname="smoke.spec.ts" time="2.424">
+</testcase>
+<testcase name="Smoke › @smoke add to cart increments badge" classname="smoke.spec.ts" time="1.507">
+</testcase>
+<testcase name="Smoke › @smoke login with invalid credentials shows error" classname="smoke.spec.ts" time="1.493">
+</testcase>
+</testsuite>
+</testsuites>

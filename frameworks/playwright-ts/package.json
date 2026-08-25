@@ -1,0 +1,16 @@
+{
+  "name": "@qaronin/playwright-ts",
+  "version": "1.0.0",
+  "private": true,
+  "description": "QARonin Playwright TypeScript UI test framework",
+  "scripts": {
+    "test": "playwright test",
+    "test:smoke": "playwright test --grep @smoke",
+    "test:e2e": "playwright test --grep @e2e",
+    "test:regression": "playwright test --grep @regression",
+    "report": "playwright show-report"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.56.0"
+  }
+}

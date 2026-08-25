@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}RoninShop{% endblock %}</title>
+  <style>
+    :root {
+      --ink: #1a1d21;
+      --paper: #f6f4ef;
+      --card: #ffffff;
+      --accent: #b3402a;
+      --accent-dark: #8c2f1e;
+      --muted: #6b7280;
+      --line: #e5e1d8;
+      --ok: #1f7a3d;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: "Helvetica Neue", Arial, sans-serif;
+      background: var(--paper);
+      color: var(--ink);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    header {
+      background: var(--ink);
+      color: #fff;
+      padding: 0.9rem 2rem;
+      display: flex;
+      align-items: center;
+      gap: 2rem;
+    }
+    header .brand {
+      font-size: 1.25rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      color: #fff;
+      text-decoration: none;
+    }
+    header .brand span { color: var(--accent); }
+    nav a {
+      color: #cfd3d8;
+      text-decoration: none;
+      margin-right: 1.25rem;
+      font-size: 0.95rem;
+    }
+    nav a:hover, nav a.active { color: #fff; }
+    .nav-right { margin-left: auto; display: flex; align-items: center; gap: 1rem; }
+    .cart-count {
+      background: var(--accent);
+      border-radius: 999px;
+      font-size: 0.75rem;
+      padding: 0.15rem 0.55rem;
+      color: #fff;
+    }
+    main { flex: 1; max-width: 1080px; width: 100%; margin: 2rem auto; padding: 0 1.5rem; }
+    footer {
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.8rem;
+      padding: 1.5rem;
+      border-top: 1px solid var(--line);
+    }
+    h1 { font-size: 1.6rem; margin-bottom: 1.25rem; }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+      gap: 1.25rem;
+    }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    .card-art {
+      height: 130px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2.6rem;
+      background: linear-gradient(135deg, #efe9dd, #e2dbcb);
+    }
+    .card-body { padding: 0.9rem 1rem 1.1rem; display: flex; flex-direction: column; gap: 0.4rem; flex: 1; }
+    .card-body h3 { font-size: 1rem; }
+    .card-body p { color: var(--muted); font-size: 0.82rem; flex: 1; }
+    .price { font-weight: 700; font-size: 1.05rem; }
+    button, .btn {
+      cursor: pointer;
+      border: none;
+      border-radius: 6px;
+      padding: 0.55rem 1rem;
+      font-size: 0.9rem;
+      background: var(--ink);
+      color: #fff;
+      transition: background 0.15s ease;
+    }
+    button:hover, .btn:hover { background: #33383f; }
+    .btn-accent { background: var(--accent); }
+    .btn-accent:hover { background: var(--accent-dark); }
+    .btn-ghost { background: transparent; color: var(--ink); border: 1px solid var(--line); }
+    .btn-ghost:hover { background: #eee9df; }
+    .flash {
+      padding: 0.7rem 1rem;
+      border-radius: 6px;
+      margin-bottom: 1rem;
+      font-size: 0.9rem;
+      display: none;
+    }
+    .flash.ok { background: #e4f3ea; color: var(--ok); display: block; }
+    .flash.err { background: #fbe7e2; color: var(--accent-dark); display: block; }
+    table { width: 100%; border-collapse: collapse; background: var(--card); border-radius: 10px; overflow: hidden; }
+    th, td { text-align: left; padding: 0.7rem 1rem; border-bottom: 1px solid var(--line); font-size: 0.92rem; }
+    th { background: #efece4; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+    .totals-row td { font-weight: 700; border-bottom: none; }
+    form.auth-form {
+      max-width: 360px;
+      margin: 3rem auto;
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 2rem;
+    }
+    label { display: block; font-size: 0.85rem; color: var(--muted); margin: 0.9rem 0 0.3rem; }
+    input[type=text], input[type=password], input[type=number] {
+      width: 100%;
+      padding: 0.55rem 0.7rem;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      font-size: 0.95rem;
+    }
+    input:focus { outline: 2px solid rgba(179,64,42,0.35); border-color: var(--accent); }
+    .hint { margin-top: 1rem; font-size: 0.8rem; color: var(--muted); }
+    .row-actions { display: flex; justify-content: space-between; align-items: center; margin-top: 1.25rem; }
+    .badge { font-size: 0.72rem; padding: 0.2rem 0.5rem; border-radius: 4px; background: #efece4; color: var(--muted); }
+    .order-confirm { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 2rem; max-width: 520px; margin: 0 auto; text-align: center; }
+    .order-confirm .oid { font-size: 2rem; color: var(--accent); font-weight: 700; margin: 0.5rem 0; }
+  </style>
+</head>
+<body>
+  <header>
+    <a class="brand" href="/products">RONIN<span>SHOP</span></a>
+    <nav>
+      <a href="/products">Products</a>
+      <a href="/cart">Cart <span class="cart-count" id="cart-count">0</span></a>
+    </nav>
+    <div class="nav-right">
+      <span id="user-badge" class="badge"></span>
+      <button id="logout-btn" class="btn-ghost" style="display:none">Logout</button>
+    </div>
+  </header>
+  <main>
+    {% block content %}{% endblock %}
+  </main>
+  <footer>RoninShop - demo e-commerce target for the QARonin test framework portfolio.</footer>
+  <script src="/static/app.js"></script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,23 @@
+{
+  "type": "object",
+  "required": ["id", "username", "status", "total", "created_at", "items"],
+  "properties": {
+    "id": {"type": "integer"},
+    "username": {"type": "string"},
+    "status": {"type": "string"},
+    "total": {"type": "number", "minimum": 0},
+    "created_at": {"type": "string"},
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["product_id", "quantity", "unit_price"],
+        "properties": {
+          "product_id": {"type": "integer"},
+          "quantity": {"type": "integer", "minimum": 1},
+          "unit_price": {"type": "number", "exclusiveMinimum": 0}
+        }
+      }
+    }
+  }
+}

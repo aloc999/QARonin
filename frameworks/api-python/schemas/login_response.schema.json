@@ -1,0 +1,10 @@
+{
+  "type": "object",
+  "required": ["access_token", "token_type", "username", "role"],
+  "properties": {
+    "access_token": {"type": "string"},
+    "token_type": {"const": "bearer"},
+    "username": {"type": "string"},
+    "role": {"type": "string", "enum": ["user", "admin"]}
+  }
+}

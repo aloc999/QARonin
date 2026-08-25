@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites name="QARonin - RoninShop API" tests="10" time="0.109">
+  <testsuite name="Auth / Login as user" id="94a6b9df-3d62-4ea5-94f2-4f2a51a5e676" timestamp="2026-08-25T20:33:56.226Z" tests="4" failures="0" errors="0" time="0.054">
+    <testcase name="status is 200" time="0.054" classname="AuthLoginAsUser"/>
+    <testcase name="response time under 2000ms" time="0.054" classname="AuthLoginAsUser"/>
+    <testcase name="has bearer token" time="0.054" classname="AuthLoginAsUser"/>
+    <testcase name="role is user" time="0.054" classname="AuthLoginAsUser"/>
+  </testsuite>
+  <testsuite name="Auth / Login rejects bad credentials" id="150c2975-aaab-4cbf-9ad4-55c359fd68ec" timestamp="2026-08-25T20:33:56.226Z" tests="2" failures="0" errors="0" time="0.007">
+    <testcase name="status is 401" time="0.007" classname="AuthLoginRejectsBadCredentials"/>
+    <testcase name="error detail present" time="0.007" classname="AuthLoginRejectsBadCredentials"/>
+  </testsuite>
+  <testsuite name="Products / List products" id="a162814b-1efb-41d0-a9a9-27de9fe3cba3" timestamp="2026-08-25T20:33:56.226Z" tests="4" failures="0" errors="0" time="0.005">
+    <testcase name="status is 200" time="0.005" classname="ProductsListProducts"/>
+    <testcase name="response time under 2000ms" time="0.005" classname="ProductsListProducts"/>
+    <testcase name="eight products seeded" time="0.005" classname="ProductsListProducts"/>
+    <testcase name="product schema valid" time="0.005" classname="ProductsListProducts"/>
+  </testsuite>
+  <testsuite name="Products / Get product by id" id="c025c4c1-388f-4e81-befe-932f9075af2a" timestamp="2026-08-25T20:33:56.226Z" tests="2" failures="0" errors="0" time="0.005">
+    <testcase name="status is 200" time="0.005" classname="ProductsGetProductById"/>
+    <testcase name="correct id returned" time="0.005" classname="ProductsGetProductById"/>
+  </testsuite>
+  <testsuite name="Products / Get missing product returns 404" id="21fbbc6f-a74c-4b53-a4eb-05dd5aacf45d" timestamp="2026-08-25T20:33:56.226Z" tests="1" failures="0" errors="0" time="0.006">
+    <testcase name="status is 404" time="0.006" classname="ProductsGetMissingProductReturns404"/>
+  </testsuite>
+  <testsuite name="Orders / Create order (chained token)" id="40f3975f-c2ca-44b4-879f-64cea0012702" timestamp="2026-08-25T20:33:56.226Z" tests="4" failures="0" errors="0" time="0.015">
+    <testcase name="status is 201" time="0.015" classname="OrdersCreateOrderChainedToken"/>
+    <testcase name="response time under 2000ms" time="0.015" classname="OrdersCreateOrderChainedToken"/>
+    <testcase name="order confirmed" time="0.015" classname="OrdersCreateOrderChainedToken"/>
+    <testcase name="total is positive" time="0.015" classname="OrdersCreateOrderChainedToken"/>
+  </testsuite>
+  <testsuite name="Orders / Get created order (chained id)" id="b72e3815-1b02-458d-95c7-6c566e81eac6" timestamp="2026-08-25T20:33:56.226Z" tests="3" failures="0" errors="0" time="0.006">
+    <testcase name="status is 200" time="0.006" classname="OrdersGetCreatedOrderChainedId"/>
+    <testcase name="same id as created" time="0.006" classname="OrdersGetCreatedOrderChainedId"/>
+    <testcase name="items array present" time="0.006" classname="OrdersGetCreatedOrderChainedId"/>
+  </testsuite>
+  <testsuite name="Orders / Create order without auth fails" id="f66ec2db-c9ef-46b8-8898-cc87c5d13067" timestamp="2026-08-25T20:33:56.226Z" tests="1" failures="0" errors="0" time="0.003">
+    <testcase name="status is 401" time="0.003" classname="OrdersCreateOrderWithoutAuthFails"/>
+  </testsuite>
+  <testsuite name="RBAC / User denied admin orders" id="cae07001-8b93-4aa9-a9f6-3086c72f4c1c" timestamp="2026-08-25T20:33:56.226Z" tests="2" failures="0" errors="0" time="0.004">
+    <testcase name="status is 403" time="0.004" classname="RbacUserDeniedAdminOrders"/>
+    <testcase name="admin role required message" time="0.004" classname="RbacUserDeniedAdminOrders"/>
+  </testsuite>
+  <testsuite name="RBAC / Flaky endpoint eventually succeeds" id="90bcd869-9a6c-4a3c-b9e9-47b8368ed81e" timestamp="2026-08-25T20:33:56.226Z" tests="1" failures="0" errors="0" time="0.004">
+    <testcase name="status is 503 or 200" time="0.004" classname="RbacFlakyEndpointEventuallySucceeds"/>
+  </testsuite>
+</testsuites>
