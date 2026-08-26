@@ -1,0 +1,105 @@
+name: security
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: "0 4 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  codeql:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [javascript-typescript, python]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+          queries: security-extended
+      - uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:${{ matrix.language }}"
+
+  pip-audit:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        project:
+          - apps/demo-target
+          - db-validation
+          - ai-selfhealing
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install pip-audit
+        run: pip install pip-audit
+      - name: Audit ${{ matrix.project }}
+        run: pip-audit -r ${{ matrix.project }}/requirements.txt --strict
+        continue-on-error: true
+      - name: Summarize findings
+        if: always()
+        run: |
+          echo "## pip-audit results for ${{ matrix.project }}" >> "$GITHUB_STEP_SUMMARY"
+          pip-audit -r ${{ matrix.project }}/requirements.txt --strict > /tmp/pip-audit.txt 2>&1 || true
+          tail -n +1 /tmp/pip-audit.txt >> "$GITHUB_STEP_SUMMARY"
+
+  npm-audit:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        project:
+          - api/postman-newman
+          - frameworks/playwright-ts
+    defaults:
+      run:
+        working-directory: ${{ matrix.project }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: npm audit (production deps only)
+        run: npm audit --omit=dev --json > audit.json || true
+        continue-on-error: true
+      - name: Annotate findings
+        if: always()
+        run: |
+          node -e "
+            const fs = require('fs');
+            const report = JSON.parse(fs.readFileSync('audit.json', 'utf8'));
+            const vulns = report.vulnerabilities ? Object.values(report.vulnerabilities) : [];
+            const real = vulns.filter(v => ['high', 'critical', 'moderate'].includes(v.severity));
+            console.log(\`npm audit (\${process.env.PROJ}): \${vulns.length} advisory(ies), \${real.length} moderate+ \`);
+            for (const v of real) {
+              console.log('::warning title=npm-audit ' + v.name + '::' + v.severity + ' - ' + (v.title || v.via && String(v.via[0]).slice(0, 80)));
+            }
+          " || true
+        env:
+          PROJ: ${{ matrix.project }}
+
+  gitleaks:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

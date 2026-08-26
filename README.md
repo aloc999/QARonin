@@ -2,6 +2,7 @@
 
 ![ci](https://github.com/aloc999/QARonin/actions/workflows/ci.yml/badge.svg)
 ![mobile](https://github.com/aloc999/QARonin/actions/workflows/mobile.yml/badge.svg)
+![security](https://github.com/aloc999/QARonin/actions/workflows/security.yml/badge.svg)
 
 QARonin is a flagship QA engineering portfolio: a monorepo where a realistic
 e-commerce system under test ("RoninShop") is exercised by multiple
@@ -31,6 +32,9 @@ QARonin/
 │                             referential checks, RBAC-vs-DB, snapshots/diffs)
 ├── api/
 │   └── postman-newman/       Postman v2.1 collection with chained auth + Newman runner
+├── tools/
+│   └── flakiness-detector/   Stdlib-only Python CLI: classifies tests
+│                             stable/flaky/broken across repeated junit runs
 ├── strategy/
 │   ├── TEST-STRATEGY.md      tier definitions, budgets, flaky policy, pipeline diagram
 │   ├── scripts/tier_report.py  JUnit XML duration/budget reporting
@@ -38,7 +42,9 @@ QARonin/
 │   └── fixtures/             real JUnit XMLs captured from actual runs
 ├── docs/COMPARISON.md        gap analysis vs reference QA portfolios
 ├── docker/                   Dockerfiles + compose (target, postgres, test runners)
-└── .github/workflows/        ci.yml (lint, PR gates, nightly), mobile.yml (emulator)
+└── .github/workflows/        ci.yml (lint, PR gates, nightly, weekly flake scan),
+                              mobile.yml (emulator), security.yml (CodeQL,
+                              pip/npm audit, gitleaks)
 ```
 
 ## Test tiers
@@ -73,6 +79,8 @@ make selfheal-test             # self-healing engine tests + offline CLI demo
 make perf-smoke                # k6 smoke script + 20s Locust headless run
 make db-validate               # DB validation vs the live demo target's SQLite
 make appium-collect            # mobile suite collection (skips without RUN_APPIUM=1)
+make visual-update             # regenerate Playwright visual baselines (chromium)
+make flake-check               # flakiness-detector report over bundled fixtures
 python -m selfheal heal \      # self-healing CLI (offline heuristic mode)
   --failure ai-selfhealing/fixtures/sample_failure.json \
   --dom ai-selfhealing/fixtures/sample_dom.json
@@ -82,7 +90,7 @@ python -m selfheal heal \      # self-healing CLI (offline heuristic mode)
 
 | Directory | Stack | Highlights |
 |-----------|-------|------------|
-| [frameworks/playwright-ts](frameworks/playwright-ts) | TypeScript, @playwright/test | Page Object Model, storageState global setup via API login, @smoke/@e2e/@regression tags, chromium+firefox projects, junit reporter |
+| [frameworks/playwright-ts](frameworks/playwright-ts) | TypeScript, @playwright/test | Page Object Model, storageState global setup via API login, @smoke/@e2e/@regression tags, chromium+firefox projects, junit reporter, axe-core accessibility scans (@a11y, WCAG 2.1 AA gate with JSON triage artifacts), full-page visual regression via toHaveScreenshot (@visual, 2% tolerance) |
 | [frameworks/api-python](frameworks/api-python) | Python, pytest + requests-style client over ASGI | session fixtures, hand-rolled retry helper against /api/flaky, jsonschema contract validation per endpoint |
 | [api/postman-newman](api/postman-newman) | Postman Collection v2.1 + Newman | chained login-token flow via collection variables, pm.test assertions, response-time budgets, junit output |
 | [apps/demo-target](apps/demo-target) | FastAPI, SQLAlchemy, SQLite | seeded catalog/users/orders, HMAC-signed tokens, admin RBAC, 30%-failure /api/flaky for retry demos |
@@ -92,6 +100,19 @@ python -m selfheal heal \      # self-healing CLI (offline heuristic mode)
 | [perf/locust](perf/locust/README.md) | Locust (Python) | weighted tasks (60% browse / 25% cart / 10% login / 5% order), 1-3s think time, custom stats CSV listeners |
 | [db-validation](db-validation) | Python, SQLAlchemy 2.x + pytest | order integrity via SQL aggregation vs API-created rows, orphan-FK checks, RBAC-vs-database consistency, seed quality rules, snapshot/diff mutation detection |
 | [frameworks/appium-mobile](frameworks/appium-mobile/README.md) | Python, Appium 2 + UiAutomator2 | emulator-gated suite (RUN_APPIUM=1 else clean skips), caps factory, wdio native demo app flows, dedicated emulator workflow |
+| [tools/flakiness-detector](tools/flakiness-detector/README.md) | Python (stdlib only) | classifies tests stable/flaky/broken across repeated JUnit XML runs via flip-rate math, markdown reports, --fail-on-flaky/--fail-on-broken CI gates, bundled synthetic fixtures + pytest suite, weekly scheduled scan in ci.yml |
+| [.github/workflows/security.yml](.github/workflows/security.yml) | GitHub Actions | CodeQL (javascript-typescript + python), pip-audit per requirements.txt, npm audit --omit=dev with annotated findings, gitleaks secret scan; PR-triggered plus weekly cron |
+
+### Visual baseline policy
+
+Visual baselines live in
+`frameworks/playwright-ts/tests/visual.spec.ts-snapshots/` and are committed.
+Regenerate them only when the intended UI has changed: run `make
+visual-update` against the live target, review the diff of the PNGs, and
+commit them together with the UI change that caused the diff. Never update
+baselines to make a failing suite pass without inspecting the actual/expected
+diffs. Baselines are maintained for chromium only; the @visual specs skip on
+other browsers.
 
 See [docs/COMPARISON.md](docs/COMPARISON.md) for an honest capability gap
 analysis against reference QA portfolios.
@@ -107,6 +128,10 @@ analysis against reference QA portfolios.
 
 Phase 2 delivered: selenium-py, appium-mobile, ai-selfhealing, perf (k6 +
 Locust), db-validation, and docs/COMPARISON.md.
+
+Phase 2.5 delivered: axe-core accessibility testing and visual regression in
+playwright-ts, tools/flakiness-detector, and security.yml (CodeQL, pip/npm
+audit, gitleaks).
 
 Phase 3 candidates (see COMPARISON.md): Pact contract testing against the
 demo target API, Karate as an additional API layer feeding the tier budget

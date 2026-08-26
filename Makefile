@@ -9,10 +9,11 @@ PERF_K6_DIR := perf/k6
 PERF_LOCUST_DIR := perf/locust
 DBVAL_DIR := db-validation
 APPIUM_DIR := frameworks/appium-mobile
+FLAKE_DIR := tools/flakiness-detector
 
 .PHONY: help install target-up target-down test-tier-smoke test-tier-api test-tier-ui-e2e \
         test-tier-regression tier-report selenium-test selfheal-test perf-smoke db-validate \
-        appium-collect ci docker-up docker-test-ui docker-test-api \
+        appium-collect visual-update flake-check ci docker-up docker-test-ui docker-test-api \
         docker-test-api-contracts docker-down clean
 
 help:
@@ -37,6 +38,8 @@ help:
 	@echo "  perf-smoke           k6 + locust quick load runs vs live target"
 	@echo "  db-validate          DB validation suite against the demo target DB"
 	@echo "  appium-collect       Collect mobile tests (skips unless RUN_APPIUM=1)"
+	@echo "  visual-update        Regenerate Playwright visual baselines (chromium)"
+	@echo "  flake-check          Flakiness detector report over its fixtures"
 
 install:
 	cd $(API_DIR) && pip install -r requirements.txt -r ../../apps/demo-target/requirements.txt
@@ -68,6 +71,13 @@ test-tier-ui-e2e: target-up
 
 test-tier-regression: target-up
 	cd $(PW_DIR) && npx playwright test
+
+visual-update: target-up
+	cd $(PW_DIR) && npx playwright test tests/visual.spec.ts \
+		--project=chromium --update-snapshots
+
+flake-check:
+	$(PY) $(FLAKE_DIR)/flakiness_detector.py "$(FLAKE_DIR)/fixtures/run-*.xml"
 
 tier-report:
 	$(PY) strategy/scripts/tier_report.py \

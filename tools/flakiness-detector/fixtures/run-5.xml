@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<testsuite name="qaronin.synthetic" tests="6" failures="2" time="0.06">
+    <testcase classname="tests.api" name="test_checkout_order" time="0.012"/>
+    <testcase classname="tests.api" name="test_login_flow" time="0.012"/>
+    <testcase classname="tests.reports" name="test_admin_report" time="0.012">
+      <failure message="assert 'expected' == 'actual'">test_admin_report failed</failure>
+    </testcase>
+    <testcase classname="tests.ui" name="test_add_to_cart" time="0.012">
+      <failure message="assert 'expected' == 'actual'">test_add_to_cart failed</failure>
+    </testcase>
+    <testcase classname="tests.ui" name="test_search_products" time="0.012"/>
+    <testcase classname="tests.api" name="test_new_feature" time="0.012"/>
+</testsuite>

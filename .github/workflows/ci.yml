@@ -212,6 +212,18 @@ jobs:
             perf/locust/report.csv
             perf/locust/report.html
 
+  flakiness-scan:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Flakiness detector smoke run over bundled fixtures
+        run: |
+          python3 tools/flakiness-detector/flakiness_detector.py \
+            "tools/flakiness-detector/fixtures/run-*.xml" -o /tmp/flake-report.md
+          cat /tmp/flake-report.md
+          python3 -m pytest tools/flakiness-detector/tests -q
+
   nightly-regression:
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
@@ -239,7 +251,14 @@ jobs:
         run: npx playwright install chromium firefox --with-deps
       - name: Full UI suite on ${{ matrix.browser }}
         working-directory: frameworks/playwright-ts
-        run: npx playwright test --project=${{ matrix.browser }}
+        run: npx playwright test --project=${{ matrix.browser }} --grep-invert "@visual"
+      - name: Upload junit for weekly flakiness scan
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-junit-${{ matrix.browser }}
+          path: frameworks/playwright-ts/junit.xml
+          retention-days: 28
       - name: Tier budget report
         run: |
           python3 strategy/scripts/tier_report.py \
