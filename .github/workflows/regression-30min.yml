@@ -70,10 +70,7 @@ jobs:
         with:
           distribution: temurin
           java-version: "17"
-      - uses: s4u/setup-maven-action@v1.1.4
-        with:
-          java-version: 17
-          maven-version: 3.9.6
+      # No setup-maven: ubuntu runners ship Maven; setup-java provides the JDK.
       - name: Start demo target
         run: |
           pip install -r apps/demo-target/requirements.txt
@@ -130,7 +127,9 @@ jobs:
           for i in $(seq 1 30); do curl -sf http://127.0.0.1:8199/api/health && break || sleep 1; done
       - run: dotnet build frameworks/playwright-dotnet
       - name: Install Playwright browsers (.NET driver)
-        run: pwsh frameworks/playwright-dotnet/bin/Debug/net6.0/playwright.ps1 install chromium --with-deps
+        # No --with-deps: the 1.40 driver pins libasound2, renamed on Ubuntu 24.04.
+        # The runner image already ships Chrome + system libs (see shard-b).
+        run: pwsh frameworks/playwright-dotnet/bin/Debug/net6.0/playwright.ps1 install chromium
       - run: dotnet test frameworks/playwright-dotnet --no-build --filter "Category=smoke"
 
   terraform:
@@ -266,6 +265,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      - run: pip install pytest
       - run: |
           for t in vuln-aggregator dependency-audit qms-evidence site-monitor failure-triage quality-dashboard branch-collision claims-diff; do (cd tools/$t && python -m pytest tests -q); done
           (cd ai-agents/tool-loop && python -m pytest tests -q || echo "agent needs live target")
@@ -331,10 +331,6 @@ jobs:
         with:
           distribution: temurin
           java-version: "17"
-      - uses: s4u/setup-maven-action@v1.1.4
-        with:
-          java-version: 17
-          maven-version: 3.9.6
       - name: Gatling simulation
         run: mvn -f frameworks/karate/pom.xml gatling:test -Pperf -Dgatling.simulationClass=qaronin.RoninShopSimulation
 

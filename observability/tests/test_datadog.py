@@ -2,6 +2,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
 from datadog_reporter import junit_metrics
 
 OBS_DIR = Path(__file__).resolve().parent.parent
