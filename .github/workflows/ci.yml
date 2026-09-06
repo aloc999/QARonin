@@ -221,6 +221,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
       - name: Flakiness detector smoke run over bundled fixtures
         run: |
           python3 tools/flakiness-detector/flakiness_detector.py \
@@ -263,10 +266,30 @@ jobs:
           name: playwright-junit-${{ matrix.browser }}
           path: frameworks/playwright-ts/junit.xml
           retention-days: 28
-      - name: Tier budget report
+      - name: Tier budget report (this job produces only the UI junit)
+        if: always()
         run: |
           python3 strategy/scripts/tier_report.py \
             frameworks/playwright-ts/junit.xml \
-            frameworks/api-python/junit.xml \
-            api/postman-newman/newman-report.xml \
-            --budget ui=600 --budget api=300 --budget newman=120
+            --budget junit=1200
+      - name: Restore junit history
+        uses: actions/cache@v4
+        with:
+          path: reports/history
+          key: junit-history-${{ github.run_id }}
+          restore-keys: junit-history-
+      - name: Snapshot junit + render trend dashboard
+        if: always()
+        run: |
+          mkdir -p reports/history
+          cp frameworks/playwright-ts/junit.xml \
+            reports/history/junit-$(date -u +%Y%m%d)-${{ matrix.browser }}.xml
+          ls -1 reports/history/junit-*.xml | sort | head -n -30 | xargs -r rm
+          python3 tools/quality-dashboard/dashboard.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: quality-dashboard-${{ matrix.browser }}
+          path: |
+            reports/quality-dashboard.html
+            reports/history/

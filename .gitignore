@@ -31,6 +31,8 @@ coverage.xml
 htmlcov/
 reports/visual-report.html
 reports/regression-30.md
+reports/quality-dashboard.html
+reports/history/
 evals/llm/eval-report.json
 
 # Terraform
