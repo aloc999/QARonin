@@ -37,9 +37,12 @@ gh api repos/aloc999/QARonin/branches/main/protection -X PUT --input /tmp/protec
 
 Verify: `gh api repos/aloc999/QARonin/branches/main/protection --jq .required_status_checks.contexts`.
 
-## 2. GitLab (`aloc999/QARonin`, branch `main`) — TODO after token rotation
+## 2. GitLab (`aloc999/QARonin`, branch `main`) — PARTIAL (default protection)
 
-GitLab needs a fresh token (the chat-exposed one must be revoked first).
+Verified 2026-09-06: GitLab protects `main` by default — force push OFF
+(toggled on once for the post-rebase history alignment, then restored OFF).
+Remaining hardening (needs a fresh token; the chat-exposed one must be
+revoked first) — Settings → Repository → Protected branches → `main`:
 
 - [ ] Settings → Repository → Protected branches → `main`:
   - Allowed to merge: Maintainers
