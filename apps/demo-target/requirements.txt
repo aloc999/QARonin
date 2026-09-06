@@ -1,5 +1,10 @@
 fastapi==0.141.1
-starlette<1.0.0
+# Floor only, no upper bound: app/main.py _render() adapts to the
+# TemplateResponse signature of any Starlette (old name-first, new
+# request-first). The previous `starlette<1.0.0` cap still allowed
+# shim-less 0.4x/0.5x lines that 500 every UI page, so the cap gave
+# false safety; the helper is the real guarantee.
+starlette>=0.37.2
 uvicorn==0.37.0
 sqlalchemy==2.0.43
 pydantic==2.11.7

@@ -20,6 +20,25 @@ app.mount("/static", StaticFiles(directory=_BASE_DIR / "static"), name="static")
 templates = Jinja2Templates(directory=str(_BASE_DIR / "templates"))
 
 
+def _render(request: Request, name: str, **context):
+    """Version-agnostic TemplateResponse.
+
+    Starlette <0.29: TemplateResponse(name, context).
+    Starlette 0.29-0.x: new (request, name, context) order + compat shim
+      (removed in some later 0.x/1.x lines, which is why the call style
+      cannot be pinned by version number alone).
+    Starlette >=1.0: TemplateResponse(request, name, context) only.
+    Detected once via signature inspection; no per-request overhead.
+    """
+    import inspect
+
+    first = next(iter(inspect.signature(templates.TemplateResponse).parameters), "")
+    ctx = {"request": request, **context}
+    if first == "request":
+        return templates.TemplateResponse(request, name, ctx)
+    return templates.TemplateResponse(name, ctx)
+
+
 @app.on_event("startup")
 def on_startup():
     seed()
@@ -65,18 +84,18 @@ def index():
 
 @app.get("/login", response_class=HTMLResponse)
 def login_page(request: Request):
-    return templates.TemplateResponse("login.html", {"request": request})
+    return _render(request, "login.html")
 
 
 @app.get("/products", response_class=HTMLResponse)
 def products_page(request: Request, db: Session = Depends(get_session)):
     products = db.query(Product).all()
-    return templates.TemplateResponse("products.html", {"request": request, "products": products})
+    return _render(request, "products.html", products=products)
 
 
 @app.get("/cart", response_class=HTMLResponse)
 def cart_page(request: Request):
-    return templates.TemplateResponse("cart.html", {"request": request})
+    return _render(request, "cart.html")
 
 
 # ---------- API ----------
