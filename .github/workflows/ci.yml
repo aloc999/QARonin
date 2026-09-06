@@ -26,7 +26,9 @@ jobs:
           python3 -m json.tool contracts/pact/pacts/roninshop-consumer-roninshop-provider.json > /dev/null
           python3 -m json.tool observability/grafana-dashboard.json > /dev/null
       - name: Syntax-check python scripts
-        run: python3 -m py_compile strategy/scripts/tier_report.py
+        run: python3 -m py_compile strategy/scripts/tier_report.py strategy/scripts/no_hard_waits.py strategy/scripts/coverage_gate.py strategy/scripts/regression_30.py
+      - name: Static quality gates (no hard waits, no new test collisions)
+        run: make lint-tests
       - name: Validate compose config
         run: docker compose -f docker/docker-compose.yml config --quiet
 

@@ -96,15 +96,124 @@ QARonin/
 Full definitions, escalation rules and the flaky-test quarantine policy are in
 [strategy/TEST-STRATEGY.md](strategy/TEST-STRATEGY.md).
 
-## Quickstart
+## Prerequisites
+
+| Tool | Minimum version | Needed for | Install |
+|------|----------------|------------|---------|
+| Python | 3.11+ | demo-target, api/db/contract suites, all `tools/*`, evals | `python3 --version` |
+| Node.js | 22 LTS | Playwright-TS, Cypress, Newman | `node --version` |
+| Java | 17 | Karate, Gatling | `java -version` |
+| Maven | 3.9+ | Karate, Gatling (runners ship it; local: `mvn -version`) | — |
+| .NET | 6 SDK (build) / 8+ runtime OK via `DOTNET_ROLL_FORWARD=Major` | Playwright-C# | `dotnet --list-sdks` |
+| Terraform | >= 1.6 | `infra/terraform` validate/plan | `terraform version` |
+| Docker | any recent | Grid compose, ZAP/JMeter images, `docker compose config` lint | `docker --version` |
+| PowerShell | 7+ | Playwright browser install for .NET (`playwright.ps1`) | `pwsh --version` |
+| Optional | — | DeepEval judged metrics: `OPENAI_API_KEY`; DataDog ship: `DD_API_KEY`; Slack notify: `SLACK_WEBHOOK_URL`; live reference: `AE_LIVE=1`, `GQL_LIVE=1` | env vars |
+
+Python packages are pinned per suite (`requirements.txt` next to each suite);
+Node packages per `package.json` + committed lockfiles. No root venv needed.
+
+## Setup
 
 ```bash
-make install     # python deps, playwright browsers, newman
-make ci          # L0+L1 gate: target pytest -> api suite -> smoke -> budget report
-make regression-30  # full gate: 4 parallel shards, hard 30-min budget
+git clone https://github.com/aloc999/QARonin.git && cd QARonin
+
+# Shortcut for the basics (Python API deps + Playwright browsers + Newman):
+make install
+# Cypress / .NET / BDD / Java need their own steps below.
+
+# 1. Python suites (demo-target + api-python; repeat pattern per suite)
+pip install -r apps/demo-target/requirements.txt -r frameworks/api-python/requirements.txt
+
+# 2. Playwright-TS browsers (chromium + firefox)
+cd frameworks/playwright-ts && npm ci && npx playwright install chromium firefox && cd ../..
+
+# 3. Newman
+cd api/postman-newman && npm install && cd ../..
+
+# 4. Cypress (E2E + component)
+cd frameworks/cypress && npm install && cd ../..
+
+# 5. .NET parity suite + its browsers
+dotnet build frameworks/playwright-dotnet
+pwsh frameworks/playwright-dotnet/bin/Debug/net6.0/playwright.ps1 install chromium
+
+# 6. BDD + misc Python (behave, mcp, deepeval as needed)
+pip install -r frameworks/bdd-python/requirements.txt
+pip install mcp   # only for mcp-server / mcp-test
+
+# 7. Start the system under test
+make target-up                 # RoninShop on http://127.0.0.1:8199
+curl -sf http://127.0.0.1:8199/api/health   # readiness probe (also used by CI/k8s)
 ```
 
-Individual pieces:
+Demo credentials: `demo/demo1234` (user), `admin/admin1234` (admin).
+
+## Running suites
+
+Every suite runs headless by default (CI mode). Headed runs open a visible
+browser for debugging.
+
+```bash
+make ci              # L0+L1 gate: target pytest -> api suite -> smoke -> budget report
+make regression-30   # full gate: 4 parallel shards, hard 30-min budget (needs target-up)
+```
+
+| Suite | Headless (default) | Headed (debug) |
+|-------|-------------------|----------------|
+| Playwright-TS | `cd frameworks/playwright-ts && npx playwright test` | `npx playwright test --headed` (add `--project=chromium --grep @smoke` to focus) |
+| Playwright-C# | `make csharp-test` | `cd frameworks/playwright-dotnet && dotnet test --no-build --filter Category=smoke` with headed config: set `Headless=false` via `HEADED=1`? Not wired — run with `PWDEBUG=1 dotnet test ...` for inspector |
+| Cypress E2E | `make cypress-test` (`cypress run --e2e`) | `cd frameworks/cypress && npx cypress open` (interactive runner) |
+| Cypress component | `make cypress-component` | `npx cypress open --component` |
+| Selenium | `make selenium-test` (headless by default) | `HEADLESS=0 BROWSER=chrome python -m pytest frameworks/selenium-py -m smoke` |
+| Appium | `make appium-collect` (skips without `RUN_APPIUM=1` + emulator) | start emulator, `RUN_APPIUM=1 python -m pytest frameworks/appium-mobile` |
+| API Python | `cd frameworks/api-python && pytest` | n/a (no browser) — add `-v` / `-x` / `-k name` to focus |
+| Behave BDD | `make bdd-test` | n/a — `behave --tags=@smoke` when tags exist |
+| Karate | `make karate-test` (needs `mvn`) | n/a — `-Dkarate.options="--tags @smoke"` to focus |
+| Newman | `cd api/postman-newman && npm test` | `npm run test:verbose` |
+| JMeter | `make perf-jmeter` (needs `jmeter`) | open `perf/jmeter/smoke.jmx` in the JMeter GUI |
+| Gatling | `mvn -f frameworks/karate/pom.xml test-compile gatling:test -Pperf` (needs target) | reports open from `target/gatling/<run>/index.html` |
+
+Focusing tips: `pytest -k`, `behave -n`, `--grep @smoke`, `--filter Category=smoke`,
+`-Dkarate.options="--tags @smoke"`, `cypress run --spec`.
+
+## Test reports
+
+| Report | How to generate | Output |
+|--------|----------------|--------|
+| JUnit XML (per suite) | produced by every run (`pytest --junitxml`, Playwright `junit`, Newman junit, surefire) | `**/junit.xml`, `newman-report.xml` |
+| Unified visual report | `make visual-report` | `reports/visual-report.html` |
+| Trend dashboard | `make dashboard` (reads `reports/history/junit-*.xml`) | `reports/quality-dashboard.html` |
+| Coverage + gate | `make coverage` (86%+ typical; gate `--min 0.5`) | `coverage.xml`, terminal summary |
+| Tier budgets | `make tier-report` | pass/fail per suite vs budget |
+| Allure (Playwright-TS) | `ALLURE=1 npx playwright test` then `npx allure generate allure-results` (needs the `allure` CLI: `npm i -D allure-commandline` or system package) | `allure-report/` |
+| Cypress videos/screenshots | automatic on failure | `frameworks/cypress/cypress/{videos,screenshots}/` |
+| Newman HTML | `cd api/postman-newman && npm run test:html` | `newman-report.html` |
+| Gatling | after a `-Pperf` run | `frameworks/karate/target/gatling/*/index.html` |
+| Vuln summary | `make vuln-report` (after producing audit JSONs) | `reports/vuln-summary.md` |
+| Failure triage | `make triage` | `reports/failure-triage.json` |
+| QMS evidence pack | `make qms-evidence` | `reports/qms-evidence/<stamp>/` + `manifest.json` |
+| LLM evals | `python evals/llm/eval.py` | `evals/llm/eval-report.json` |
+
+## Code quality policy (enforced)
+
+- **No hard-coded waits.** Fixed sleeps (`waitForTimeout`, `time.sleep`,
+  `Thread.sleep`, `Task.Delay`, `cy.wait(ms)`, implicit waits) are banned in
+  test code and rejected by `make lint-tests` (runs in CI `lint`). Use:
+  Playwright auto-retry assertions, Selenium `WebDriverWait` (`utils/waits.py`,
+  `utils/mobile_wait.py`), `cy.wait(@alias)`, conditional readiness probes.
+  Legitimate exceptions (retry-backoff under test, k6 think time, CI service
+  probes) are documented in code or `strategy/scripts/no_hard_waits.allowlist`.
+- **Meaningful assertions.** Assert behavior, not existence: exact texts,
+  counts, shapes (`order_id` starts with `#` + digits), status codes *plus*
+  bodies, totals recomputed from inputs. No `assert True` placeholders
+  (grep-verified).
+- **No new test-module collisions.** Same-basename `test_*.py` across suites
+  breaks combined collection; `tools/branch-collision/monitor.py` fails the
+  build on anything outside `allowlist.txt`.
+- **Coverage must not decline**: `strategy/scripts/coverage_gate.py --min 0.5`.
+
+Individual pieces (everything behind `make help`):
 
 ```bash
 make target-up                 # start RoninShop on http://127.0.0.1:8199

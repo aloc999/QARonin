@@ -1,0 +1,2 @@
+# Files exempt from the no-hard-waits gate, with reasons. Prefer fixing over listing.
+frameworks/api-python/tests/test_flaky.py: tests the retry-with-backoff helper itself; sleep is the subject, not a wait crutch

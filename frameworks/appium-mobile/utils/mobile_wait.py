@@ -16,3 +16,6 @@ class MobileWait:
 
     def clickable(self, locator):
         return self.wait.until(EC.element_to_be_clickable(locator))
+
+    def present(self, locator):
+        return self.wait.until(EC.presence_of_element_located(locator))
