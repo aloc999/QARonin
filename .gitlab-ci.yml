@@ -54,7 +54,7 @@ csharp:
     - for i in $(seq 1 30); do curl -sf http://127.0.0.1:8199/api/health && break || sleep 1; done
     - dotnet build frameworks/playwright-dotnet
     - pwsh frameworks/playwright-dotnet/bin/Debug/net6.0/playwright.ps1 install chromium --with-deps
-    - dotnet test frameworks/playwright-dotnet --no-build --filter "Category=smoke"
+    - DOTNET_ROLL_FORWARD=Major dotnet test frameworks/playwright-dotnet --no-build --filter "Category=smoke"
 
 cypress:
   stage: test
