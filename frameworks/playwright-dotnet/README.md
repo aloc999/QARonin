@@ -27,9 +27,8 @@ in via `POST /api/auth/login` once per fixture and writes a storage-state
 file (localStorage `token`/`username`/`role`) consumed through
 `ContextOptions().StorageStatePath`, so UI tests start authenticated.
 
-Note: UI suites (TS and C#) require the demo-target's pinned dependencies
-(`apps/demo-target/requirements.txt`, Starlette 0.x template API). Running the
-target under a newer Starlette breaks `/products` rendering for every
-framework, not just this one.
+Note: UI suites run against any Starlette line (`starlette>=0.37.2`):
+`app/main.py::_render()` adapts to old and new `TemplateResponse` signatures,
+locked by `apps/demo-target/tests/test_pages.py`.
 
 Tier: L2 UI E2E (C# shard, ~8 min budget). CI job: `csharp-tests`.
