@@ -24,7 +24,10 @@ class BaseScreen:
     def elements(self, name: str):
         locator = self.LOCATORS[name]
         (by_type, value), = locator.items()
-        return self.driver.find_elements(LOCATOR_TYPES[by_type], value)
+        resolved = (LOCATOR_TYPES[by_type], value)
+        # Explicit wait first: raw find_elements would race screen render.
+        self.wait.present(resolved)
+        return self.driver.find_elements(*resolved)
 
     def tap(self, name: str):
         self.element(name).click()

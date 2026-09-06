@@ -13,7 +13,7 @@ FLAKE_DIR := tools/flakiness-detector
 
 .PHONY: help install target-up target-down test-tier-smoke test-tier-api test-tier-ui-e2e \
         test-tier-regression tier-report selenium-test selfheal-test perf-smoke db-validate \
-        appium-collect visual-update flake-check ci docker-up docker-test-ui docker-test-api \
+        appium-collect visual-update flake-check lint-tests ci docker-up docker-test-ui docker-test-api \
         docker-test-api-contracts docker-down clean pact-test karate-test csharp-build \
         csharp-install csharp-test cypress-test cypress-component bdd-test deepeval tf-validate \
         tf-plan obs-test llm-eval ae-test agent-test mcp-test coverage visual-report \
@@ -44,6 +44,7 @@ help:
 	@echo "  appium-collect       Collect mobile tests (skips unless RUN_APPIUM=1)"
 	@echo "  visual-update        Regenerate Playwright visual baselines (chromium)"
 	@echo "  flake-check          Flakiness detector report over its fixtures"
+	@echo "  lint-tests           No-hard-waits + collision static quality gates"
 	@echo "  pact-test            Pact consumer + provider contract tests"
 	@echo "  karate-test          Karate API suite vs live target (needs mvn)"
 	@echo "  csharp-build         Build Playwright .NET parity suite (needs dotnet)"
@@ -111,6 +112,10 @@ visual-update: target-up
 
 flake-check:
 	$(PY) $(FLAKE_DIR)/flakiness_detector.py "$(FLAKE_DIR)/fixtures/run-*.xml"
+
+lint-tests:
+	$(PY) strategy/scripts/no_hard_waits.py
+	$(PY) tools/branch-collision/monitor.py
 
 tier-report:
 	$(PY) strategy/scripts/tier_report.py \

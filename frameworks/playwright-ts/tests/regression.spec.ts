@@ -40,14 +40,16 @@ test.describe("Regression", () => {
   });
 
   test("@regression cart persists across reload", async ({ page }) => {
-    const productsPage = page;
     await page.goto("/products");
     await page.locator(".card.product").nth(1).locator(".add-to-cart").click();
-    await page.locator("#cart-count");
+    // Explicit condition: badge reflects the persisted cart (localStorage is
+    // written synchronously on click; the assertion auto-retries, no sleeps).
+    await expect(page.locator("#cart-count")).toHaveText("1");
 
     await page.reload();
-    await page.waitForTimeout(300);
-
+    // After reload the badge is rehydrated from localStorage on
+    // DOMContentLoaded; wait for that state, not a fixed timeout.
+    await expect(page.locator("#cart-count")).not.toBeEmpty();
     const count = await page.locator("#cart-count").textContent();
     expect(parseInt(count ?? "0", 10)).toBeGreaterThanOrEqual(1);
   });

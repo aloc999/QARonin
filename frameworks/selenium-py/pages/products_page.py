@@ -11,12 +11,15 @@ class ProductsPage(BasePage):
     FLASH = (By.ID, "flash")
 
     def card_count(self) -> int:
+        # Explicit wait first: raw find_elements would race page render.
+        self.wait.present(self.PRODUCT_CARDS)
         return len(self.driver.find_elements(*self.PRODUCT_CARDS))
 
     def wait_product_count(self, count: int) -> bool:
         return self.wait.count_is(By.CSS_SELECTOR, ".card.product", count)
 
     def card_for(self, product_name: str):
+        self.wait.present(self.PRODUCT_CARDS)
         cards = self.driver.find_elements(*self.PRODUCT_CARDS)
         for card in cards:
             if product_name in card.find_element(By.TAG_NAME, "h3").text:

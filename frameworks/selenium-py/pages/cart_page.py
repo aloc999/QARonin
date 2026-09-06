@@ -15,6 +15,8 @@ class CartPage(BasePage):
     EMPTY_STATE = (By.ID, "cart-empty")
 
     def row_count(self) -> int:
+        # Explicit wait first: raw find_elements would race table render.
+        self.wait.present(self.CART_ROWS)
         return len(self.driver.find_elements(*self.CART_ROWS))
 
     def wait_row_count(self, count: int):

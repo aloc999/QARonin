@@ -67,7 +67,7 @@ test.describe("GraphQL live reference", () => {
         variables: { code: "DE" },
       },
     });
-    expect(res.ok()).toBeTruthy();
+    expect(res.status()).toBe(200);
     const json = (await res.json()) as { data: { country: { name: string; capital: string } } };
     expect(json.data.country.name).toBe("Germany");
     expect(json.data.country.capital).toBe("Berlin");

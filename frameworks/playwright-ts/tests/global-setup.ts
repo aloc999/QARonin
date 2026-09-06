@@ -11,6 +11,9 @@ setup("authenticate via API and save storage state", async () => {
   });
   expect(res.ok()).toBeTruthy();
   const body = await res.json();
+  // Meaningful gate: the suite cannot run without a real bearer token.
+  expect(typeof body.access_token).toBe("string");
+  expect(body.access_token.length).toBeGreaterThan(0);
   const token = body.access_token;
 
   fs.mkdirSync("playwright/.auth", { recursive: true });
