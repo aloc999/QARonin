@@ -23,6 +23,8 @@ jobs:
         run: |
           python3 -m json.tool api/postman-newman/postman_collection.json > /dev/null
           python3 -m json.tool api/postman-newman/postman_environment.json > /dev/null
+          python3 -m json.tool contracts/pact/pacts/roninshop-consumer-roninshop-provider.json > /dev/null
+          python3 -m json.tool observability/grafana-dashboard.json > /dev/null
       - name: Syntax-check python scripts
         run: python3 -m py_compile strategy/scripts/tier_report.py
       - name: Validate compose config

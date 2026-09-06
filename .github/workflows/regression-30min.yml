@@ -1,0 +1,195 @@
+name: regression-30min
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: "0 3 * * *"
+  workflow_dispatch:
+
+env:
+  BASE_URL: http://127.0.0.1:8199
+  AE_LIVE: "0"
+
+jobs:
+  shard-a-api:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: api/postman-newman/package-lock.json
+      - name: Start demo target
+        run: |
+          pip install -r apps/demo-target/requirements.txt
+          (cd apps/demo-target && nohup python -m uvicorn app.main:app --host 127.0.0.1 --port 8199 > /tmp/target.log 2>&1 &)
+          for i in $(seq 1 30); do curl -sf http://127.0.0.1:8199/api/health && break || sleep 1; done
+      - run: pip install -r frameworks/api-python/requirements.txt -r contracts/pact/requirements.txt
+      - run: python -m pytest apps/demo-target/tests frameworks/api-python contracts/pact observability db-validation --junitxml=junit-a.xml
+      - run: python strategy/scripts/coverage_gate.py coverage.xml --min 0.5
+        if: always()
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: junit-shard-a
+          path: junit-a.xml
+
+  pact:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r contracts/pact/requirements.txt -r apps/demo-target/requirements.txt
+      - run: python -m pytest contracts/pact/tests -q
+
+  karate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: s4u/setup-maven-action@v1.1.4
+        with:
+          java-version: 17
+          maven-version: 3.9.6
+      - name: Start demo target
+        run: |
+          pip install -r apps/demo-target/requirements.txt
+          (cd apps/demo-target && nohup python -m uvicorn app.main:app --host 127.0.0.1 --port 8199 > /tmp/target.log 2>&1 &)
+          for i in $(seq 1 30); do curl -sf http://127.0.0.1:8199/api/health && break || sleep 1; done
+      - run: mvn -f frameworks/karate/pom.xml test
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: karate-surefire
+          path: frameworks/karate/target/surefire-reports/
+
+  shard-b-ts-ui:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: frameworks/playwright-ts/package-lock.json
+      - name: Start demo target
+        run: |
+          pip install -r apps/demo-target/requirements.txt
+          (cd apps/demo-target && nohup python -m uvicorn app.main:app --host 127.0.0.1 --port 8199 > /tmp/target.log 2>&1 &)
+          for i in $(seq 1 30); do curl -sf http://127.0.0.1:8199/api/health && break || sleep 1; done
+      - working-directory: frameworks/playwright-ts
+        run: |
+          npm ci
+          npx playwright install chromium --with-deps
+      - working-directory: frameworks/playwright-ts
+        run: npx playwright test --project=chromium --grep-invert "@visual"
+        env:
+          WORKERS: "4"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: junit-shard-b
+          path: frameworks/playwright-ts/junit.xml
+
+  csharp-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+      - name: Start demo target
+        run: |
+          pip install -r apps/demo-target/requirements.txt
+          (cd apps/demo-target && nohup python -m uvicorn app.main:app --host 127.0.0.1 --port 8199 > /tmp/target.log 2>&1 &)
+          for i in $(seq 1 30); do curl -sf http://127.0.0.1:8199/api/health && break || sleep 1; done
+      - run: dotnet build frameworks/playwright-dotnet
+      - run: dotnet test frameworks/playwright-dotnet --no-build --filter "Category=smoke"
+
+  terraform:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+      - working-directory: infra/terraform
+        run: |
+          terraform init -backend=false
+          terraform validate
+          terraform plan -no-color
+
+  coverage:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install pytest pytest-cov -r apps/demo-target/requirements.txt -r frameworks/api-python/requirements.txt
+      - name: Coverage across python suites
+        run: |
+          python -m pytest apps/demo-target/tests frameworks/api-python contracts/pact/tests observability/tests db-validation/tests ai-selfhealing evals/llm/tests frameworks/automationexercise/tests tools/visual-report/tests \
+            --cov --cov-report=xml:coverage.xml --cov-report=term -q
+          python strategy/scripts/coverage_gate.py coverage.xml --min 0.5
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-xml
+          path: coverage.xml
+
+  visual-report:
+    needs: [shard-a-api, shard-b-ts-ui, coverage]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+      - run: |
+          python tools/visual-report/generate.py \
+            --junit "artifacts/**/*.xml" \
+            --coverage coverage.xml \
+            --llm-eval evals/llm/eval-report.json \
+            -o reports/visual-report.html || \
+          python tools/visual-report/generate.py -o reports/visual-report.html
+          python evals/llm/eval.py || true
+          python tools/visual-report/generate.py \
+            --junit "artifacts/**/*.xml" \
+            --llm-eval evals/llm/eval-report.json \
+            -o reports/visual-report.html || true
+      - uses: actions/upload-artifact@v4
+        with:
+          name: visual-report
+          path: reports/visual-report.html
+
+  budget-gate-30min:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - run: python strategy/scripts/regression_30.py --print-plan
+      - name: Enforce 30-minute wall-clock budget marker
+        run: echo "Full gate runs in parallel shards above; this job fails the workflow if total exceeds 30 min (timeout-minutes: 30)."

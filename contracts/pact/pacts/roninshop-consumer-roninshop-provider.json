@@ -1,0 +1,77 @@
+{
+  "consumer": { "name": "roninshop-consumer" },
+  "provider": { "name": "roninshop-provider" },
+  "interactions": [
+    {
+      "description": "login with valid demo credentials",
+      "request": {
+        "method": "POST",
+        "path": "/api/auth/login",
+        "headers": { "Content-Type": "application/json" },
+        "body": { "username": "demo", "password": "demo1234" }
+      },
+      "response": {
+        "status": 200,
+        "headers": { "Content-Type": "application/json" },
+        "body": {
+          "access_token": "MATCH_STRING",
+          "token_type": "bearer",
+          "username": "demo",
+          "role": "user"
+        },
+        "matchingRules": {
+          "$.body.access_token": { "match": "type" }
+        }
+      }
+    },
+    {
+      "description": "list products returns seeded catalog",
+      "request": { "method": "GET", "path": "/api/products" },
+      "response": {
+        "status": 200,
+        "body": [
+          { "id": 1, "name": "MATCH_STRING", "price": 1.0, "stock": 1 }
+        ],
+        "matchingRules": {
+          "$.body": { "min": 1 },
+          "$.body[*].id": { "match": "integer" },
+          "$.body[*].name": { "match": "type" }
+        }
+      }
+    },
+    {
+      "description": "get single product by id",
+      "request": { "method": "GET", "path": "/api/products/1" },
+      "response": {
+        "status": 200,
+        "body": { "id": 1, "name": "MATCH_STRING", "price": 1.0, "stock": 1 },
+        "matchingRules": {
+          "$.body.name": { "match": "type" }
+        }
+      }
+    },
+    {
+      "description": "create order with one item",
+      "request": {
+        "method": "POST",
+        "path": "/api/orders",
+        "headers": { "Authorization": "Bearer MATCH_STRING" },
+        "body": { "items": [{ "product_id": 1, "quantity": 1 }] }
+      },
+      "response": {
+        "status": 201,
+        "body": { "id": 1, "username": "demo", "status": "created", "total": 1.0 },
+        "matchingRules": {
+          "$.body.id": { "match": "integer" },
+          "$.header.Authorization": { "match": "regex", "regex": "^Bearer .+" }
+        }
+      }
+    },
+    {
+      "description": "health endpoint for provider states",
+      "request": { "method": "GET", "path": "/api/health" },
+      "response": { "status": 200, "body": { "status": "ok" } }
+    }
+  ],
+  "metadata": { "pactSpecification": { "version": "2.0.0" } }
+}

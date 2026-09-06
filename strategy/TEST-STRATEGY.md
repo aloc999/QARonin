@@ -11,9 +11,9 @@ the budgets mechanically.
 | Tier | Name | Budget | CI placement | Suites |
 |------|------|--------|--------------|--------|
 | L0 | Smoke | < 5 min | PR gate (blocking) | playwright `@smoke`, demo-target pytest, api-python `smoke` marker |
-| L1 | API Regression | < 10 min | Merge gate (blocking) | api-python full suite (incl. contracts), Newman collection, demo-target pytest |
-| L2 | UI E2E | < 20 min | Nightly + pre-release | playwright `@e2e` + `@regression` (chromium) |
-| L3 | Full Regression | < 60 min | Nightly + release sign-off | all of L2 plus cross-browser matrix (chromium + firefox), contract suite, dockerized runs |
+| L1 | API Regression | < 10 min | Merge gate (blocking) | api-python full suite (incl. contracts), Karate, Pact, Newman collection, demo-target pytest |
+| L2 | UI E2E | < 20 min | Nightly + pre-release | playwright `@e2e` + `@regression` (chromium), C# parity smoke |
+| L3 | Full Regression | < 30 min | Nightly + release sign-off | 4 parallel shards via `make regression-30` (api + TS-UI + lang-UI + data); firefox matrix + soak stay nightly |
 
 ### What belongs in each tier, and why
 
@@ -27,8 +27,10 @@ the budgets mechanically.
 - **L2 UI E2E** validates user-visible journeys end to end: purchase flow,
   cart persistence, RBAC surfaced through the browser. Kept small because UI
   suites are the slowest and flakiest investment.
-- **L3 Full Regression** is L2 plus cross-browser sharding and everything
-  else. It exists for release confidence, not development feedback.
+- **L3 Full Regression** runs all tiers in 4 parallel shards with a hard
+  30-minute wall-clock gate (`make regression-30`, see
+  docs/REGRESSION-30MIN.md). Firefox matrix, Appium, soak, and live external
+  checks stay nightly and out of the gate.
 
 ### Execution-time budget table
 
@@ -37,7 +39,13 @@ the budgets mechanically.
 | demo-target pytest | 60 | tier_report.py --budget target=60 |
 | api-python | 300 | tier_report.py --budget api=300 |
 | postman-newman | 120 | tier_report.py --budget newman=120 |
-| playwright-ts (all projects) | 600 | tier_report.py --budget ui=600 |
+| playwright-ts (chromium gate) | 600 | tier_report.py --budget ui=600 |
+| karate | 120 | surefire JUnit + tier_report.py |
+| pact (consumer+provider) | 60 | pytest JUnit |
+| coverage gate | 300 | strategy/scripts/coverage_gate.py --min 0.5 |
+
+Whole-gate ceiling: **1800s wall clock** enforced by
+strategy/scripts/regression_30.py (`make regression-30`).
 
 Budgets are ceilings, not targets. A suite trending toward its ceiling in the
 tier report is a refactoring signal.

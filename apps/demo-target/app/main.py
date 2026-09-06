@@ -195,3 +195,24 @@ def flaky_endpoint():
     if random.random() < 0.30:
         raise HTTPException(status_code=503, detail="Transient failure (simulated)")
     return {"status": "ok", "ts": time.time()}
+
+
+@app.get("/api/health")
+def health():
+    return {"status": "ok", "service": "roninshop", "version": app.version}
+
+
+@app.get("/metrics")
+def metrics():
+    # Minimal Prometheus exposition (no extra deps): process + app counters.
+    lines = [
+        "# HELP roninshop_up 1 when the app serves traffic",
+        "# TYPE roninshop_up gauge",
+        "roninshop_up 1",
+        "# HELP roninshop_build_info Build metadata",
+        "# TYPE roninshop_build_info gauge",
+        f'roninshop_build_info{{version="{app.version}"}} 1',
+    ]
+    from fastapi.responses import PlainTextResponse
+
+    return PlainTextResponse("\n".join(lines) + "\n", media_type="text/plain; version=0.0.4")

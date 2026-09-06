@@ -1,0 +1,99 @@
+stages: [test, report, gate]
+
+variables:
+  BASE_URL: "http://127.0.0.1:8199"
+  AE_LIVE: "0"
+
+pact:
+  stage: test
+  image: python:3.12-slim
+  script:
+    - pip install -r contracts/pact/requirements.txt -r apps/demo-target/requirements.txt
+    - python -m pytest contracts/pact/tests -q
+  timeout: 10m
+
+observability:
+  stage: test
+  image: python:3.12-slim
+  script:
+    - pip install -r apps/demo-target/requirements.txt
+    - python -m pytest observability/tests -q
+  timeout: 10m
+
+llm-eval:
+  stage: test
+  image: python:3.12-slim
+  script:
+    - pip install requests pytest
+    - python evals/llm/eval.py
+    - python -m pytest evals/llm/tests -q
+  artifacts:
+    paths: [evals/llm/eval-report.json]
+    when: always
+  timeout: 10m
+
+ae-parity:
+  stage: test
+  image: python:3.12-slim
+  script:
+    - pip install -r frameworks/automationexercise/requirements.txt -r apps/demo-target/requirements.txt
+    - python -m pytest frameworks/automationexercise/tests -q
+  timeout: 10m
+
+karate:
+  stage: test
+  image: maven:3.9-eclipse-temurin-17
+  script:
+    - pip install -r apps/demo-target/requirements.txt
+    - (cd apps/demo-target && nohup python -m uvicorn app.main:app --host 127.0.0.1 --port 8199 >/tmp/target.log 2>&1 &)
+    - for i in $(seq 1 30); do curl -sf http://127.0.0.1:8199/api/health && break || sleep 1; done
+    - mvn -f frameworks/karate/pom.xml test
+  timeout: 15m
+
+csharp:
+  stage: test
+  image: mcr.microsoft.com/dotnet/sdk:8.0
+  script:
+    - pip install -r apps/demo-target/requirements.txt
+    - (cd apps/demo-target && nohup python -m uvicorn app.main:app --host 127.0.0.1 --port 8199 >/tmp/target.log 2>&1 &)
+    - for i in $(seq 1 30); do curl -sf http://127.0.0.1:8199/api/health && break || sleep 1; done
+    - dotnet build frameworks/playwright-dotnet
+    - dotnet test frameworks/playwright-dotnet --no-build --filter "Category=smoke"
+  timeout: 20m
+
+terraform:
+  stage: test
+  image: hashicorp/terraform:1.9
+  script:
+    - cd infra/terraform && terraform init -backend=false && terraform validate && terraform plan -no-color
+  timeout: 10m
+
+coverage:
+  stage: report
+  image: python:3.12-slim
+  script:
+    - pip install pytest pytest-cov -r apps/demo-target/requirements.txt -r frameworks/api-python/requirements.txt
+    - python -m pytest apps/demo-target/tests frameworks/api-python contracts/pact/tests observability/tests db-validation/tests ai-selfhealing evals/llm/tests frameworks/automationexercise/tests tools/visual-report/tests --cov --cov-report=xml:coverage.xml -q
+    - python strategy/scripts/coverage_gate.py coverage.xml --min 0.5
+  artifacts:
+    paths: [coverage.xml]
+    when: always
+  timeout: 15m
+
+visual-report:
+  stage: report
+  image: python:3.12-slim
+  script:
+    - python tools/visual-report/generate.py -o reports/visual-report.html
+    - python -m pytest tools/visual-report/tests -q
+  artifacts:
+    paths: [reports/visual-report.html]
+    when: always
+  timeout: 10m
+
+regression-30-plan:
+  stage: gate
+  image: python:3.12-slim
+  script:
+    - python strategy/scripts/regression_30.py --print-plan
+  timeout: 30m

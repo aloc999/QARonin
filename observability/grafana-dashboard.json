@@ -1,0 +1,8 @@
+{
+  "title": "QARonin - RoninShop",
+  "panels": [
+    {"title": "Up", "expr": "roninshop_up"},
+    {"title": "Build info", "expr": "roninshop_build_info"},
+    {"title": "HTTP error rate (example)", "expr": "sum(rate(http_requests_total{code=~\"5..\"}[5m]))"}
+  ]
+}

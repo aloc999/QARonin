@@ -1,0 +1,11 @@
+[run]
+source = app, api, dbval, selfheal
+branch = True
+
+[report]
+show_missing = True
+skip_covered = False
+exclude_lines =
+    pragma: no cover
+    raise AssertionError
+    if TYPE_CHECKING:

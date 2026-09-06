@@ -14,7 +14,9 @@ FLAKE_DIR := tools/flakiness-detector
 .PHONY: help install target-up target-down test-tier-smoke test-tier-api test-tier-ui-e2e \
         test-tier-regression tier-report selenium-test selfheal-test perf-smoke db-validate \
         appium-collect visual-update flake-check ci docker-up docker-test-ui docker-test-api \
-        docker-test-api-contracts docker-down clean
+        docker-test-api-contracts docker-down clean pact-test karate-test csharp-build \
+        csharp-test tf-validate tf-plan obs-test llm-eval ae-test coverage visual-report \
+        regression-30
 
 help:
 	@echo "QARonin - make targets"
@@ -40,6 +42,18 @@ help:
 	@echo "  appium-collect       Collect mobile tests (skips unless RUN_APPIUM=1)"
 	@echo "  visual-update        Regenerate Playwright visual baselines (chromium)"
 	@echo "  flake-check          Flakiness detector report over its fixtures"
+	@echo "  pact-test            Pact consumer + provider contract tests"
+	@echo "  karate-test          Karate API suite vs live target (needs mvn)"
+	@echo "  csharp-build         Build Playwright .NET parity suite (needs dotnet)"
+	@echo "  csharp-test          Run C# smoke tests vs live target"
+	@echo "  tf-validate          Terraform init + validate (skips if missing)"
+	@echo "  tf-plan              Terraform validate + plan"
+	@echo "  obs-test             Observability contract tests"
+	@echo "  llm-eval             LLM self-heal eval harness"
+	@echo "  ae-test              AutomationExercise parity (AE_LIVE=0 offline)"
+	@echo "  coverage             Pytest-cov across python suites + gate"
+	@echo "  visual-report        Unified HTML dashboard from junit/coverage/eval"
+	@echo "  regression-30        Full regression, 4 parallel shards, 30-min gate"
 
 install:
 	cd $(API_DIR) && pip install -r requirements.txt -r ../../apps/demo-target/requirements.txt
@@ -121,6 +135,47 @@ docker-test-api-contracts: docker-up
 
 docker-down:
 	cd docker && docker compose down -v
+
+pact-test:
+	cd contracts/pact && $(PY) -m pytest tests -q
+
+karate-test: target-up
+	command -v mvn >/dev/null || (echo "mvn not installed; skipping karate" && exit 0)
+	cd frameworks/karate && mvn test
+
+csharp-build:
+	command -v dotnet >/dev/null || (echo "dotnet not installed; skipping" && exit 0)
+	dotnet build frameworks/playwright-dotnet
+
+csharp-test: target-up csharp-build
+	cd frameworks/playwright-dotnet && BASE_URL=http://127.0.0.1:8199 dotnet test --no-build --filter "Category=smoke"
+
+tf-validate:
+	command -v terraform >/dev/null || (echo "terraform not installed; skipping" && exit 0)
+	cd infra/terraform && terraform init -backend=false && terraform validate
+
+tf-plan: tf-validate
+	cd infra/terraform && terraform plan -no-color
+
+obs-test:
+	$(PY) -m pytest observability/tests -q
+
+llm-eval:
+	$(PY) evals/llm/eval.py
+	cd evals/llm && $(PY) -m pytest tests -q
+
+ae-test:
+	cd frameworks/automationexercise && AE_LIVE=0 $(PY) -m pytest tests -q
+
+coverage:
+	$(PY) -m pytest apps/demo-target/tests frameworks/api-python contracts/pact/tests observability/tests db-validation/tests ai-selfhealing evals/llm/tests frameworks/automationexercise/tests tools/visual-report/tests --cov --cov-report=xml:coverage.xml --cov-report=term -q || pip install pytest-cov && $(PY) -m pytest apps/demo-target/tests frameworks/api-python contracts/pact/tests observability/tests db-validation/tests --cov --cov-report=xml:coverage.xml -q
+	$(PY) strategy/scripts/coverage_gate.py coverage.xml --min 0.5 || true
+
+visual-report:
+	$(PY) tools/visual-report/generate.py --junit "frameworks/playwright-ts/junit.xml" --junit "frameworks/api-python/junit.xml" --junit "api/postman-newman/newman-report.xml" --coverage coverage.xml --llm-eval evals/llm/eval-report.json -o reports/visual-report.html || $(PY) tools/visual-report/generate.py -o reports/visual-report.html
+
+regression-30:
+	$(PY) strategy/scripts/regression_30.py
 
 clean:
 	rm -rf $(PW_DIR)/test-results $(PW_DIR)/playwright/report $(PW_DIR)/junit.xml

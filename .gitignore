@@ -21,6 +21,26 @@ trace.zip
 junit.xml
 newman-report.xml
 newman-report.html
+coverage.xml
+.coverage
+htmlcov/
+reports/visual-report.html
+reports/regression-30.md
+evals/llm/eval-report.json
+
+# Terraform
+infra/terraform/env-manifest.json
+infra/terraform/.terraform/
+infra/terraform/*.tfstate*
+
+# .NET
+bin/
+obj/
+TestResults/
+
+# Java / Maven
+target/
+*.class
 
 # Databases
 *.db
