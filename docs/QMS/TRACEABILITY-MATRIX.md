@@ -21,8 +21,12 @@ Requirement -> test cases -> automation. AE = automationexercise.com/test_cases.
 | REQ-REVIEW-01 | Product review | AE-21 | AE live check only (RoninShop reviews out of scope -> gap) |
 | REQ-SUB-01 | Subscription/footer | AE-10, AE-11 | AE live check only (gap) |
 | REQ-SCROLL-01 | Scroll up/down | AE-25, AE-26 | AE live check only (gap) |
-| REQ-OBS-01 | Health + metrics endpoints | — | observability tests |
+| REQ-OBS-01 | Health + metrics endpoints | — | observability tests, DataDog reporter (dry-run) |
 | REQ-CONTRACT-01 | Consumer-driven contracts hold | — | Pact consumer+provider |
+| REQ-BDD-01 | Business-readable API regression | AE flows in Gherkin | Behave auth/catalog/orders features |
+| REQ-CYP-01 | Cypress E2E + component parity | AE-2/4/8/12 | Cypress smoke/regression/network/component |
+| REQ-DAST-01 | Baseline DAST scan | — | ZAP baseline job (informational) + vuln-aggregator |
+| REQ-EVAL-01 | LLM output quality gates | — | DeepEval RAG/conv/agent (judged nightly, guards in gate) |
 | REQ-PERF-01 | Checkout p95 < 1200ms, reads p95 < 800ms | — | k6 SLO gates, Locust profile |
 
 Gaps (no RoninShop analogue) are intentional scope records, not failures.

@@ -43,4 +43,32 @@
       </plugin>
     </plugins>
   </build>
+
+  <!-- Gatling load profile: `mvn gatling:test -Pperf` (needs BASE_URL live).
+       Kept in a profile so the default `mvn test` stays a fast API gate. -->
+  <profiles>
+    <profile>
+      <id>perf</id>
+      <dependencies>
+        <dependency>
+          <groupId>io.gatling.highcharts</groupId>
+          <artifactId>gatling-charts-highcharts</artifactId>
+          <version>3.12.0</version>
+          <scope>test</scope>
+        </dependency>
+      </dependencies>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>io.gatling</groupId>
+            <artifactId>gatling-maven-plugin</artifactId>
+            <version>4.8.2</version>
+            <configuration>
+              <simulationClass>qaronin.RoninShopSimulation</simulationClass>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
 </project>

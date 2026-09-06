@@ -21,20 +21,31 @@ QARonin/
 │                              deliberately flaky endpoint)
 ├── frameworks/
 │   ├── playwright-ts/        TypeScript Playwright framework (POM, storageState, tiers,
-│   │                         incl. ae-parity.spec.ts vs AutomationExercise cases)
+│   │                         incl. ae-parity.spec.ts vs AutomationExercise cases,
+│   │                         graphql.spec.ts patterns, ALLURE/WEBKIT-gated projects)
 │   ├── playwright-dotnet/    C# Playwright lintas-bahasa parity (same smoke/regression tags)
+│   ├── cypress/              Cypress 15 E2E (parity) + component specs, custom commands,
+│   │                         network interception, JSON fixtures
+│   ├── bdd-python/           Behave Gherkin suites (auth/catalog/orders, offline)
 │   ├── api-python/           pytest + requests API suite with JSON-schema contracts
 │   ├── selenium-py/          Selenium 4 + pytest suite (chrome/firefox/grid, same POM)
 │   ├── appium-mobile/        Appium 2 + UiAutomator2 skeleton (emulator-gated)
-│   ├── karate/               Karate DSL API layer (auth/products/orders, JUnit via Maven)
+│   ├── karate/               Karate DSL API layer (auth/products/orders, mock-payment
+│   │                         mock server, Gatling perf profile, JUnit via Maven)
 │   └── automationexercise/   Live + parity suite vs automationexercise.com/test_cases (26 cases)
 ├── contracts/pact/           Pact consumer-driven contracts + provider verification
 ├── ai-selfhealing/           Agentic self-healing locator engine (offline heuristics
 │                             + optional LLM agent, CLI, JSONL audit trail)
-├── evals/llm/                LLM-eval harness scoring the healer (accuracy/latency JSON)
+├── ai-agents/tool-loop/     Deterministic ReAct tool-use demo (offline, JSONL traces)
+├── mcp-server/              QA MCP server (tier_report, coverage_gate, list_suites, pact_status)
+├── evals/
+│   ├── llm/                 LLM-eval harness scoring the healer (accuracy/latency JSON)
+│   └── deepeval/            DeepEval RAG/conv/agent harness (judged needs OPENAI_API_KEY)
 ├── perf/
 │   ├── k6/                   SLO-as-code load scripts (checkout, API, smoke)
-│   └── locust/               Weighted-task Locust profile with custom CSV stats
+│   ├── locust/               Weighted-task Locust profile with custom CSV stats
+│   ├── jmeter/               JMeter smoke plan (threads, duration assertion)
+│   └── README.md             tool matrix (k6/Locust/JMeter/Gatling) + gates
 ├── db-validation/            SQL data-validation framework (order integrity,
 │                             referential checks, RBAC-vs-DB, snapshots/diffs)
 ├── api/
@@ -44,7 +55,18 @@ QARonin/
 ├── tools/
 │   ├── flakiness-detector/   Stdlib-only Python CLI: classifies tests
 │   │                         stable/flaky/broken across repeated junit runs
-│   └── visual-report/        Stdlib HTML dashboard: junit + coverage + LLM-eval
+│   ├── visual-report/        Stdlib HTML dashboard: junit + coverage + LLM-eval
+│   ├── vuln-aggregator/      Merge pip-audit/npm/gitleaks JSON into one summary
+│   ├── dependency-audit/     Pin hygiene + OSV.dev check over requirements.txt
+│   ├── qms-evidence/         Bundle release records with ISO/SOC2 control map
+│   ├── site-monitor/         Liveness + content-drift checks with baseline
+│   ├── failure-triage/       Classify JUnit failures into buckets + owners
+│   ├── quality-dashboard/    Trend view across historic JUnit runs
+│   ├── branch-collision/     Fail on new same-basename test collisions
+│   └── claims-diff/          CSV/JSON snapshot diff for reconciliation
+├── k8s/                      Target Deployment/Service + smoke Job; grid compose in docker/
+├── observability/            /metrics + structured logs + Prometheus/OTel configs + dashboard,
+│                             DataDog reporter (dry-run without DD_API_KEY)
 ├── docs/
 │   ├── QMS/                  ISO 9001 / 29119 QMS pack (manual, SOP, traceability, validation plan)
 │   └── REGRESSION-30MIN.md   4-shard sub-30-minute gate design + timing evidence
@@ -92,6 +114,11 @@ cd api/postman-newman && npm test                     # Newman collection run
 
 make selenium-test             # Selenium 4 suite (smoke + regression markers)
 make pact-test                 # Pact consumer + provider contracts (L1)
+make bdd-test                  # Behave Gherkin suites (offline)
+make cypress-test              # Cypress E2E vs live target (needs npm install)
+make deepeval                  # DeepEval harness (offline guards; judged need key)
+make agent-test                # tool-loop agent tests (needs live target)
+make mcp-test                  # MCP protocol tests
 make karate-test               # Karate DSL suite vs live target (needs mvn)
 make csharp-test               # Playwright .NET lintas-bahasa smoke (needs dotnet)
 make tf-validate               # Terraform init + validate (skips if missing)
@@ -119,13 +146,21 @@ python -m selfheal heal \      # self-healing CLI (offline heuristic mode)
 | [frameworks/playwright-ts](frameworks/playwright-ts) | TypeScript, @playwright/test | Page Object Model, storageState global setup via API login, @smoke/@e2e/@regression tags, chromium+firefox projects, junit reporter, axe-core accessibility scans (@a11y, WCAG 2.1 AA gate with JSON triage artifacts), full-page visual regression via toHaveScreenshot (@visual, 2% tolerance) |
 | [frameworks/api-python](frameworks/api-python) | Python, pytest + requests-style client over ASGI | session fixtures, hand-rolled retry helper against /api/flaky, jsonschema contract validation per endpoint |
 | [contracts/pact](contracts/pact) | Python, Pact v2 (broker-free) | consumer contract JSON + TestClient provider verification, L1 gate |
-| [frameworks/karate](frameworks/karate) | Java 17, Karate 1.4 + JUnit5 | auth/products/orders DSL features feeding tier budgets |
+| [frameworks/karate](frameworks/karate) | Java 17, Karate 1.4 + JUnit5 (+ Gatling 3.12 perf profile) | auth/products/orders DSL, mock-payment mock server, Gatling sim |
+| [frameworks/cypress](frameworks/cypress) | TypeScript/JS, Cypress 15 | E2E parity, component spec, custom commands, cy.intercept patterns |
+| [frameworks/bdd-python](frameworks/bdd-python) | Python, Behave | Gherkin auth/catalog/orders, offline TestClient |
 | [frameworks/playwright-dotnet](frameworks/playwright-dotnet) | C#, Playwright 1.40 + NUnit (.NET 6) | lintas-bahasa parity: same @smoke/@regression tags as TS |
 | [frameworks/automationexercise](frameworks/automationexercise) | Python, pytest + requests | live reference checks (cases 1-26) + offline RoninShop parity |
 | [evals/llm](evals/llm) | Python | fixed JSONL healer dataset, accuracy/latency gate, eval-report.json |
+| [evals/deepeval](evals/deepeval) | Python, DeepEval | RAG/conv/agent judged metrics (key-gated) + offline guards |
+| [ai-agents/tool-loop](ai-agents/tool-loop) | Python | deterministic ReAct demo over local tools, JSONL traces |
+| [mcp-server](mcp-server) | Python, MCP SDK | tier_report/coverage_gate/list_suites/pact_status over stdio |
 | [infra/terraform](infra/terraform) | Terraform >= 1.6 | ephemeral QA env manifest, credential-free validate/plan in CI |
 | [observability](observability) | Python stdlib + FastAPI | /api/health, /metrics (Prometheus), JSONL spans, OTel/Prom configs, Grafana dashboard |
 | [tools/visual-report](tools/visual-report) | Python stdlib | one HTML dashboard from junit + coverage + LLM-eval |
+| [tools/qms-evidence](tools/qms-evidence) | Python stdlib | evidence pack with ISO/SOC2 control mapping |
+| [k8s](k8s) | YAML | target Deployment/Service/smoke Job; Selenium Grid compose profile |
+| [security](.github/workflows/regression-30min.yml) | ZAP baseline (informational) + CodeQL/audits/gitleaks | zap-baseline job, vuln-aggregator summary |
 | [docs/QMS](docs/QMS) | Markdown | ISO 9001/29119 QMS: manual, SOP, traceability, validation plan, doc control |
 | [api/postman-newman](api/postman-newman) | Postman Collection v2.1 + Newman | chained login-token flow via collection variables, pm.test assertions, response-time budgets, junit output |
 | [apps/demo-target](apps/demo-target) | FastAPI, SQLAlchemy, SQLite | seeded catalog/users/orders, HMAC-signed tokens, admin RBAC, 30%-failure /api/flaky for retry demos |

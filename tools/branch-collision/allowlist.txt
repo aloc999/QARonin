@@ -1,0 +1,7 @@
+# Legacy same-basename collisions that predate the monitor. Harmless because
+# every suite runs in its own pytest process (see Makefile `coverage`), but
+# recorded here so the monitor fails only on NEW collisions.
+test_auth.py
+test_orders.py
+test_products.py
+test_rbac.py

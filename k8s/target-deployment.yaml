@@ -1,0 +1,38 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: roninshop-target
+  labels:
+    app: roninshop
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: roninshop
+  template:
+    metadata:
+      labels:
+        app: roninshop
+    spec:
+      containers:
+        - name: target
+          image: qaronin/target:latest
+          ports:
+            - containerPort: 8199
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: 8199
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: 8199
+            periodSeconds: 15
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi

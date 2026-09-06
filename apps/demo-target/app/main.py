@@ -69,8 +69,7 @@ def login_page(request: Request):
 
 
 @app.get("/products", response_class=HTMLResponse)
-def products_page(request: Request):
-    db = next(get_session())
+def products_page(request: Request, db: Session = Depends(get_session)):
     products = db.query(Product).all()
     return templates.TemplateResponse("products.html", {"request": request, "products": products})
 

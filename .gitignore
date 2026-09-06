@@ -17,6 +17,11 @@ playwright-report/
 blob-report/
 trace.zip
 
+# Cypress artifacts
+cypress/videos/
+cypress/screenshots/
+cypress/downloads/
+
 # JUnit / test reports
 junit.xml
 newman-report.xml

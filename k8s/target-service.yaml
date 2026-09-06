@@ -1,0 +1,33 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: roninshop-target
+  labels:
+    app: roninshop
+spec:
+  selector:
+    app: roninshop
+  ports:
+    - name: http
+      port: 8199
+      targetPort: 8199
+  type: ClusterIP
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: qaronin-smoke
+  labels:
+    app: qaronin
+spec:
+  backoffLimit: 1
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: api-tests
+          image: qaronin/api-tests:latest
+          env:
+            - name: BASE_URL
+              value: http://roninshop-target:8199
+          command: ["python", "-m", "pytest", "-q"]

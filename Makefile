@@ -15,8 +15,10 @@ FLAKE_DIR := tools/flakiness-detector
         test-tier-regression tier-report selenium-test selfheal-test perf-smoke db-validate \
         appium-collect visual-update flake-check ci docker-up docker-test-ui docker-test-api \
         docker-test-api-contracts docker-down clean pact-test karate-test csharp-build \
-        csharp-install csharp-test tf-validate tf-plan obs-test llm-eval ae-test coverage visual-report \
-        regression-30
+        csharp-install csharp-test cypress-test cypress-component bdd-test deepeval tf-validate \
+        tf-plan obs-test llm-eval ae-test agent-test mcp-test coverage visual-report \
+        vuln-report dep-audit qms-evidence site-check triage dashboard collision-check \
+        claims-diff-test k8s-lint perf-jmeter regression-30
 
 help:
 	@echo "QARonin - make targets"
@@ -51,10 +53,26 @@ help:
 	@echo "  tf-plan              Terraform validate + plan"
 	@echo "  obs-test             Observability contract tests"
 	@echo "  llm-eval             LLM self-heal eval harness"
+	@echo "  deepeval             DeepEval RAG/conv/agent harness (offline; judged need OPENAI_API_KEY)"
 	@echo "  ae-test              AutomationExercise parity (AE_LIVE=0 offline)"
+	@echo "  agent-test           Offline tool-loop agent tests (needs live target)"
+	@echo "  mcp-test             MCP server protocol tests (needs mcp SDK)"
+	@echo "  bdd-test             Behave Gherkin suites (offline)"
+	@echo "  cypress-test         Cypress E2E vs live target (needs npm install)"
+	@echo "  cypress-component    Cypress React component runner (needs npm install)"
 	@echo "  coverage             Pytest-cov across python suites + gate"
 	@echo "  visual-report        Unified HTML dashboard from junit/coverage/eval"
-	@echo "  regression-30        Full regression, 4 parallel shards, 30-min gate"
+	@echo "  vuln-report          Aggregate pip/npm/gitleaks JSON into Markdown"
+	@echo "  dep-audit            Pin hygiene + OSV check over requirements.txt"
+	@echo "  qms-evidence         Bundle release records with ISO/SOC2 mapping"
+	@echo "  site-check           Liveness + drift check vs live target"
+	@echo "  triage               Classify JUnit failures into buckets"
+	@echo "  dashboard            Trend dashboard across historic runs"
+	@echo "  collision-check      Fail on new same-basename test collisions"
+	@echo "  claims-diff-test     CSV/JSON snapshot diff tool tests"
+	@echo "  k8s-lint             Validate k8s manifests + grid compose file"
+	@echo "  perf-jmeter          JMeter smoke plan vs live target (needs jmeter)"
+	@echo "  regression-30        Full regression, parallel shards, 30-min gate"
 
 install:
 	cd $(API_DIR) && pip install -r requirements.txt -r ../../apps/demo-target/requirements.txt
@@ -187,15 +205,81 @@ coverage: target-up
 	cd db-validation && $(PY) -m pytest -q --cov=dbval --cov-append --cov-report=
 	cd ai-selfhealing && PYTHONPATH=. $(PY) -m pytest -q --cov=selfheal --cov-append --cov-report=
 	cd evals/llm && $(PY) -m pytest tests -q --cov=. --cov-append --cov-report=
+	cd evals/deepeval && $(PY) -m pytest -q --cov=. --cov-append --cov-report=
 	cd frameworks/automationexercise && AE_LIVE=0 $(PY) -m pytest tests -q --cov=. --cov-append --cov-report=
-	$(PY) -m pytest tools/visual-report/tests tools/flakiness-detector/tests strategy/tests -q --cov=tools --cov=strategy --cov-append --cov-report=xml:coverage.xml --cov-report=term
+	cd mcp-server && $(PY) -m pytest tests -q --cov=. --cov-append --cov-report=
+	cd ai-agents/tool-loop && $(PY) -m pytest tests -q --cov=. --cov-append --cov-report=
+	cd tools/visual-report && $(PY) -m pytest tests -q --cov=. --cov-append --cov-report=
+	cd tools/flakiness-detector && $(PY) -m pytest tests -q --cov=. --cov-append --cov-report=
+	cd tools/vuln-aggregator && $(PY) -m pytest tests -q --cov=. --cov-append --cov-report=
+	cd tools/dependency-audit && $(PY) -m pytest tests -q --cov=. --cov-append --cov-report=
+	cd tools/qms-evidence && $(PY) -m pytest tests -q --cov=. --cov-append --cov-report=
+	cd tools/site-monitor && $(PY) -m pytest tests -q --cov=. --cov-append --cov-report=
+	cd tools/failure-triage && $(PY) -m pytest tests -q --cov=. --cov-append --cov-report=
+	cd tools/quality-dashboard && $(PY) -m pytest tests -q --cov=. --cov-append --cov-report=
+	cd tools/branch-collision && $(PY) -m pytest tests -q --cov=. --cov-append --cov-report=
+	cd tools/claims-diff && $(PY) -m pytest tests -q --cov=. --cov-append --cov-report=
+	cd strategy && $(PY) -m pytest tests -q --cov=. --cov-append --cov-report=
+	$(PY) -m coverage xml -o coverage.xml
+	$(PY) -m coverage report
 	$(PY) strategy/scripts/coverage_gate.py coverage.xml --min 0.5
 
 visual-report:
 	$(PY) tools/visual-report/generate.py --junit "frameworks/playwright-ts/junit.xml" --junit "frameworks/api-python/junit.xml" --junit "api/postman-newman/newman-report.xml" --coverage coverage.xml --llm-eval evals/llm/eval-report.json -o reports/visual-report.html || $(PY) tools/visual-report/generate.py -o reports/visual-report.html
 
-regression-30:
+regression-30: target-up
 	$(PY) strategy/scripts/regression_30.py
+
+cypress-test: target-up
+	cd frameworks/cypress && (command -v cypress >/dev/null || npx --no-install cypress --version >/dev/null 2>&1 || (echo "cypress not installed; run 'cd frameworks/cypress && npm install'" && exit 0))
+	cd frameworks/cypress && npx cypress run --e2e
+
+cypress-component:
+	cd frameworks/cypress && npx cypress run --component
+
+bdd-test:
+	cd frameworks/bdd-python && $(PY) -m behave
+
+deepeval:
+	cd evals/deepeval && $(PY) -m pytest -q
+
+agent-test: target-up
+	cd ai-agents/tool-loop && $(PY) -m pytest tests -q
+
+mcp-test:
+	cd mcp-server && $(PY) -m pytest tests -q
+
+vuln-report:
+	$(PY) tools/vuln-aggregator/aggregate.py
+
+dep-audit:
+	$(PY) tools/dependency-audit/audit.py apps/demo-target/requirements.txt frameworks/api-python/requirements.txt --offline || true
+
+qms-evidence:
+	$(PY) tools/qms-evidence/collect.py
+
+site-check: target-up
+	$(PY) tools/site-monitor/monitor.py
+
+triage:
+	$(PY) tools/failure-triage/triage.py frameworks/playwright-ts/junit.xml frameworks/api-python/junit.xml || true
+
+dashboard:
+	$(PY) tools/quality-dashboard/dashboard.py
+
+collision-check:
+	$(PY) tools/branch-collision/monitor.py
+
+claims-diff-test:
+	cd tools/claims-diff && $(PY) -m pytest tests -q
+
+k8s-lint:
+	$(PY) -c "import yaml,glob; [yaml.safe_load_all(open(f)) for f in ['k8s/target-deployment.yaml','k8s/target-service.yaml']]; yaml.safe_load(open('docker/docker-compose.grid.yml')); print('k8s + grid YAML OK')"
+	command -v kubectl >/dev/null && kubectl apply -f k8s/ --dry-run=client || true
+
+perf-jmeter: target-up
+	command -v jmeter >/dev/null || (echo "jmeter not installed; skipping" && exit 0)
+	jmeter -n -t perf/jmeter/smoke.jmx -l /tmp/jmeter-results.jtl
 
 clean:
 	rm -rf $(PW_DIR)/test-results $(PW_DIR)/playwright/report $(PW_DIR)/junit.xml

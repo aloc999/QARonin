@@ -1,0 +1,9 @@
+{
+  "min_products": 1,
+  "required_keys": [
+    "name",
+    "price",
+    "stock"
+  ],
+  "products_hash": "00b1729ae6a11e1a"
+}

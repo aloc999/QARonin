@@ -1,0 +1,2 @@
+deepeval==3.7.0
+pytest==8.4.2

@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "qaronin-qa": {
+      "command": "python",
+      "args": ["mcp-server/server.py"],
+      "cwd": "/home/raygun99/projects/QARonin"
+    }
+  }
+}

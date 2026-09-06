@@ -56,6 +56,60 @@ csharp:
     - pwsh frameworks/playwright-dotnet/bin/Debug/net6.0/playwright.ps1 install chromium --with-deps
     - dotnet test frameworks/playwright-dotnet --no-build --filter "Category=smoke"
 
+cypress:
+  stage: test
+  image: cypress/included:15.21.1
+  script:
+    - pip install -r apps/demo-target/requirements.txt
+    - (cd apps/demo-target && nohup python -m uvicorn app.main:app --host 127.0.0.1 --port 8199 >/tmp/target.log 2>&1 &)
+    - for i in $(seq 1 30); do curl -sf http://127.0.0.1:8199/api/health && break || sleep 1; done
+    - cd frameworks/cypress && npm ci
+    - npx cypress run --e2e
+  artifacts:
+    when: on_failure
+    paths: [frameworks/cypress/cypress/videos, frameworks/cypress/cypress/screenshots]
+
+bdd-deepeval-mcp:
+  stage: test
+  image: python:3.12-slim
+  script:
+    - pip install -r frameworks/bdd-python/requirements.txt -r apps/demo-target/requirements.txt -r evals/deepeval/requirements.txt mcp
+    - (cd frameworks/bdd-python && behave)
+    - (cd evals/deepeval && python -m pytest -q)
+    - (cd mcp-server && python -m pytest tests -q)
+
+ops-tools:
+  stage: test
+  image: python:3.12-slim
+  script:
+    - for t in vuln-aggregator dependency-audit qms-evidence site-monitor failure-triage quality-dashboard branch-collision claims-diff; do (cd tools/$t && python -m pytest tests -q); done
+    - python tools/branch-collision/monitor.py
+    - python tools/vuln-aggregator/aggregate.py -o vuln-summary.md
+  artifacts:
+    paths: [vuln-summary.md]
+    when: always
+
+zap-baseline:
+  stage: test
+  image: docker:27
+  services: [docker:27-dind]
+  allow_failure: true
+  script:
+    - pip install -r apps/demo-target/requirements.txt
+    - (cd apps/demo-target && nohup python -m uvicorn app.main:app --host 127.0.0.1 --port 8199 >/tmp/target.log 2>&1 &)
+    - for i in $(seq 1 30); do curl -sf http://127.0.0.1:8199/api/health && break || sleep 1; done
+    - docker run --network host -v $PWD:/zap/wrk:rw ghcr.io/zaproxy/zaproxy:stable zap-baseline.py -I -t http://127.0.0.1:8199 -J zap-report.json -r zap-report.html || true
+  artifacts:
+    paths: [zap-report.json, zap-report.html]
+    when: always
+
+k8s:
+  stage: test
+  image: python:3.12-slim
+  script:
+    - pip install pyyaml
+    - make k8s-lint
+
 terraform:
   stage: test
   image: hashicorp/terraform:1.9
@@ -66,7 +120,7 @@ coverage:
   stage: report
   image: python:3.12-slim
   script:
-    - pip install pytest pytest-cov -r apps/demo-target/requirements.txt -r frameworks/api-python/requirements.txt
+    - pip install pytest pytest-cov requests mcp -r apps/demo-target/requirements.txt -r frameworks/api-python/requirements.txt -r evals/deepeval/requirements.txt
     - (cd apps/demo-target && nohup python -m uvicorn app.main:app --host 127.0.0.1 --port 8199 >/tmp/target.log 2>&1 &)
     - for i in $(seq 1 30); do curl -sf http://127.0.0.1:8199/api/health && break || sleep 1; done
     - export COVERAGE_FILE=$PWD/.coverage
@@ -76,11 +130,17 @@ coverage:
     - python -m pytest frameworks/api-python -q --cov=frameworks/api-python --cov-append --cov-report=
     - (cd contracts/pact && python -m pytest tests -q --cov=. --cov-append --cov-report=)
     - python -m pytest observability/tests -q --cov=observability --cov-append --cov-report=
-    - python -m pytest db-validation -q --cov=db-validation --cov-append --cov-report=
+    - (cd db-validation && python -m pytest -q --cov=dbval --cov-append --cov-report=)
     - (cd ai-selfhealing && PYTHONPATH=. python -m pytest -q --cov=selfheal --cov-append --cov-report=)
     - (cd evals/llm && python -m pytest tests -q --cov=. --cov-append --cov-report=)
+    - (cd evals/deepeval && python -m pytest -q --cov=. --cov-append --cov-report=)
     - (cd frameworks/automationexercise && AE_LIVE=0 python -m pytest tests -q --cov=. --cov-append --cov-report=)
-    - python -m pytest tools/visual-report/tests tools/flakiness-detector/tests strategy/tests -q --cov=tools --cov=strategy --cov-append --cov-report=xml:coverage.xml --cov-report=term
+    - (cd mcp-server && python -m pytest tests -q --cov=. --cov-append --cov-report=)
+    - (cd ai-agents/tool-loop && python -m pytest tests -q --cov=. --cov-append --cov-report=)
+    - for t in visual-report flakiness-detector vuln-aggregator dependency-audit qms-evidence site-monitor failure-triage quality-dashboard branch-collision claims-diff; do (cd tools/$t && python -m pytest tests -q --cov=. --cov-append --cov-report=); done
+    - (cd strategy && python -m pytest tests -q --cov=. --cov-append --cov-report=)
+    - python -m coverage xml -o coverage.xml
+    - python -m coverage report
     - python strategy/scripts/coverage_gate.py coverage.xml --min 0.5
   artifacts:
     paths: [coverage.xml]

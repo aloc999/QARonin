@@ -1,0 +1,10 @@
+{
+  "users": [
+    { "username": "demo", "password": "demo1234", "role": "user" },
+    { "username": "admin", "password": "admin1234", "role": "admin" }
+  ],
+  "products": [
+    { "name": "Katana Letter Opener", "price": 49.99 },
+    { "name": "Zen Garden Starter Kit", "price": 29.5 }
+  ]
+}

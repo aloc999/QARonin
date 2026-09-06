@@ -11,8 +11,8 @@ the budgets mechanically.
 | Tier | Name | Budget | CI placement | Suites |
 |------|------|--------|--------------|--------|
 | L0 | Smoke | < 5 min | PR gate (blocking) | playwright `@smoke`, demo-target pytest, api-python `smoke` marker |
-| L1 | API Regression | < 10 min | Merge gate (blocking) | api-python full suite (incl. contracts), Karate, Pact, Newman collection, demo-target pytest |
-| L2 | UI E2E | < 20 min | Nightly + pre-release | playwright `@e2e` + `@regression` (chromium), C# parity smoke |
+| L1 | API Regression | < 10 min | Merge gate (blocking) | api-python full suite (incl. contracts), Karate, Pact, Behave BDD, Newman collection, demo-target pytest |
+| L2 | UI E2E | < 20 min | Nightly + pre-release | playwright `@e2e` + `@regression` (chromium), Cypress E2E, C# parity smoke |
 | L3 | Full Regression | < 30 min | Nightly + release sign-off | 4 parallel shards via `make regression-30` (api + TS-UI + lang-UI + data); firefox matrix + soak stay nightly |
 
 ### What belongs in each tier, and why

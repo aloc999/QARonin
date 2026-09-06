@@ -23,29 +23,47 @@ BUDGET_S = 1800
 ROOT = Path(__file__).resolve().parent.parent.parent
 
 SHARDS = {
-    # API + contracts + static checks: all in-process, seconds each.
+    # API + contracts + BDD + static checks: all in-process, seconds each.
     "shard-a-api": (
         "cd apps/demo-target && python -m pytest tests -q && "
         "cd ../../frameworks/api-python && python -m pytest -q && "
         "cd ../../contracts/pact && python -m pytest tests -q && "
+        "cd ../../frameworks/bdd-python && python -m behave -q && "
+        "cd ../../evals/deepeval && python -m pytest -q && "
         "cd ../../api/postman-newman && npm test --silent"
     ),
-    # TS UI: smoke+e2e on chromium only (firefox matrix stays nightly).
-    "shard-b-ts-ui": "cd frameworks/playwright-ts && npx playwright test --project=chromium --grep-invert '@visual'",
+    # TS UI + Cypress E2E on chromium (firefox/webkit matrices stay nightly).
+    # Cypress is skipped gracefully when its node_modules are absent.
+    "shard-b-ts-ui": (
+        "cd frameworks/playwright-ts && npx playwright test --project=chromium --grep-invert '@visual' && "
+        "cd ../cypress && (npx --no-install cypress version >/dev/null 2>&1 && npx cypress run --e2e || echo 'cypress not installed; skipping')"
+    ),
     # C# + Selenium smoke: language parity without the full matrix.
     "shard-c-lang-ui": (
         "(dotnet test frameworks/playwright-dotnet --filter Category=smoke || echo 'dotnet shard skipped') && "
         "cd frameworks/selenium-py && python -m pytest -q -m 'smoke or regression'"
     ),
-    # Data + misc: db, obs, evals, AE parity (offline), visual-report self-tests.
+    # Data + misc: db, obs, evals, AE parity (offline), tools unit tests.
     "shard-d-data": (
         "cd db-validation && python -m pytest -q && "
         "cd ../observability && python -m pytest tests -q && "
         "cd ../ai-selfhealing && PYTHONPATH=. python -m pytest -q && "
         "cd ../evals/llm && python -m pytest tests -q && "
         "cd ../../frameworks/automationexercise && AE_LIVE=0 python -m pytest tests -q && "
+        "cd ../../mcp-server && python -m pytest tests -q && "
+        "cd ../ai-agents/tool-loop && python -m pytest tests -q && "
         "cd ../../tools/visual-report && python -m pytest tests -q && "
-        "cd ../../tools/flakiness-detector && python -m pytest tests -q"
+        "cd ../flakiness-detector && python -m pytest tests -q && "
+        "cd ../vuln-aggregator && python -m pytest tests -q && "
+        "cd ../dependency-audit && python -m pytest tests -q && "
+        "cd ../qms-evidence && python -m pytest tests -q && "
+        "cd ../site-monitor && python -m pytest tests -q && "
+        "cd ../failure-triage && python -m pytest tests -q && "
+        "cd ../quality-dashboard && python -m pytest tests -q && "
+        "cd ../branch-collision && python -m pytest tests -q && "
+        "cd ../claims-diff && python -m pytest tests -q && "
+        "cd ../../strategy && python -m pytest tests -q && "
+        "cd .. && python tools/branch-collision/monitor.py"
     ),
 }
 

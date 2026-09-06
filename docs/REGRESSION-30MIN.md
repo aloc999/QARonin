@@ -7,10 +7,10 @@ hard **1800s** wall-clock gate (`strategy/scripts/regression_30.py`).
 
 | Shard | Contents | Typical time |
 |-------|----------|--------------|
-| A api | demo-target pytest + api-python + Pact + Newman | ~2 min |
-| B ts-ui | Playwright-TS chromium (smoke+e2e+regression, no @visual) | ~6 min |
+| A api | demo-target pytest + api-python + Pact + Behave + DeepEval (offline) + Newman | ~3 min |
+| B ts-ui | Playwright-TS chromium (smoke+e2e+regression, no @visual) + Cypress E2E | ~10 min |
 | C lang-ui | Playwright-C# smoke + Selenium smoke+regression | ~6 min |
-| D data | db-validation + observability + selfheal + LLM-eval + AE parity (offline) + visual-report + flakiness | ~3 min |
+| D data | db-validation + observability + selfheal + LLM-eval + AE parity (offline) + MCP + agent + all tools unit tests + collision monitor | ~4 min |
 
 Wall clock: **~6-9 min** typical, budget **30 min**. Firefox full-matrix,
 Appium, k6/Locust soak, and live AE checks stay nightly (not in the gate).
