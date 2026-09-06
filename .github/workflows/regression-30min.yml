@@ -131,6 +131,9 @@ jobs:
         # The runner image already ships Chrome + system libs (see shard-b).
         run: pwsh frameworks/playwright-dotnet/bin/Debug/net6.0/playwright.ps1 install chromium
       - run: dotnet test frameworks/playwright-dotnet --no-build --filter "Category=smoke"
+        env:
+          # Runner ships .NET 8/9/10 runtimes, not 6.0: roll the net6.0 testhost forward.
+          DOTNET_ROLL_FORWARD: Major
 
   terraform:
     runs-on: ubuntu-latest
