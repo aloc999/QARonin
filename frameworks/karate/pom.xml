@@ -27,6 +27,14 @@
       <version>${junit5.version}</version>
       <scope>test</scope>
     </dependency>
+    <!-- Always on test classpath so the Gatling Java simulation compiles in
+         every build; the gatling-maven-plugin (perf profile) only RUNS it. -->
+    <dependency>
+      <groupId>io.gatling.highcharts</groupId>
+      <artifactId>gatling-charts-highcharts</artifactId>
+      <version>3.12.0</version>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
 
   <build>
@@ -49,14 +57,6 @@
   <profiles>
     <profile>
       <id>perf</id>
-      <dependencies>
-        <dependency>
-          <groupId>io.gatling.highcharts</groupId>
-          <artifactId>gatling-charts-highcharts</artifactId>
-          <version>3.12.0</version>
-          <scope>test</scope>
-        </dependency>
-      </dependencies>
       <build>
         <plugins>
           <plugin>
