@@ -340,14 +340,15 @@ jobs:
 
   slack-notify:
     needs: [shard-a-api, pact, karate, shard-b-ts-ui, csharp-tests, terraform, coverage, visual-report, cypress-e2e, bdd-deepeval-mcp, ops-tools, budget-gate-30min]
-    if: always() && secrets.SLACK_WEBHOOK_URL != ''
+    if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Notify Slack
+      - name: Notify Slack (skips silently without the secret)
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
         run: |
+          [ -n "$SLACK_WEBHOOK_URL" ] || { echo "no webhook configured"; exit 0; }
           curl -X POST -H 'Content-type: application/json' \
             --data "{\"text\":\"QARonin regression-30min finished: ${{ needs.budget-gate-30min.result }}\",\"username\":\"qaronin-ci\"}" \
             "$SLACK_WEBHOOK_URL" || true
