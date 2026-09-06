@@ -1,4 +1,6 @@
+using Microsoft.Playwright;
 using Microsoft.Playwright.NUnit;
+using NUnit.Framework;
 using QARonin.PlaywrightDotnet.Pages;
 
 namespace QARonin.PlaywrightDotnet.Tests;
@@ -13,6 +15,12 @@ public class RegressionTests : PageTest
     private static string BaseUrl =>
         Environment.GetEnvironmentVariable("BASE_URL") ?? "http://127.0.0.1:8199";
 
+    [OneTimeSetUp]
+    public async Task AuthenticateOnce() => await AuthSetup.EnsureAsync(BaseUrl);
+
+    public override BrowserNewContextOptions ContextOptions() =>
+        new() { StorageStatePath = AuthSetup.StatePath };
+
     [Test]
     [Category("regression")]
     public async Task AdminRbacNegativeForUserSession()
@@ -20,7 +28,7 @@ public class RegressionTests : PageTest
         var products = new ProductsPage(Page);
         await products.OpenAsync(BaseUrl);
         var token = await Page.EvaluateAsync<string?>("() => localStorage.getItem('token')");
-        var api = await Context.APIRequest.NewContextAsync(new() { BaseURL = BaseUrl });
+        await using var api = await Playwright.APIRequest.NewContextAsync(new() { BaseURL = BaseUrl });
         var res = await api.GetAsync("/api/admin/orders",
             new() { Headers = new Dictionary<string, string> { ["Authorization"] = $"Bearer {token}" } });
         Assert.That(res.Status, Is.EqualTo(403));

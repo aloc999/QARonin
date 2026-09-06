@@ -1,5 +1,8 @@
 [run]
-source = app, api, dbval, selfheal
+# No `source` here on purpose: every coverage run passes explicit --cov
+# targets (Makefile `coverage`, CI coverage jobs). A pinned source list breaks
+# per-suite runs where those modules are not importable. branch=True must stay
+# so parallel runs combine (statement+branch data cannot mix).
 branch = True
 
 [report]

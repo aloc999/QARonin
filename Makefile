@@ -15,7 +15,7 @@ FLAKE_DIR := tools/flakiness-detector
         test-tier-regression tier-report selenium-test selfheal-test perf-smoke db-validate \
         appium-collect visual-update flake-check ci docker-up docker-test-ui docker-test-api \
         docker-test-api-contracts docker-down clean pact-test karate-test csharp-build \
-        csharp-test tf-validate tf-plan obs-test llm-eval ae-test coverage visual-report \
+        csharp-install csharp-test tf-validate tf-plan obs-test llm-eval ae-test coverage visual-report \
         regression-30
 
 help:
@@ -45,6 +45,7 @@ help:
 	@echo "  pact-test            Pact consumer + provider contract tests"
 	@echo "  karate-test          Karate API suite vs live target (needs mvn)"
 	@echo "  csharp-build         Build Playwright .NET parity suite (needs dotnet)"
+	@echo "  csharp-install       Download Playwright browsers for .NET driver (needs pwsh)"
 	@echo "  csharp-test          Run C# smoke tests vs live target"
 	@echo "  tf-validate          Terraform init + validate (skips if missing)"
 	@echo "  tf-plan              Terraform validate + plan"
@@ -147,6 +148,10 @@ csharp-build:
 	command -v dotnet >/dev/null || (echo "dotnet not installed; skipping" && exit 0)
 	dotnet build frameworks/playwright-dotnet
 
+csharp-install: csharp-build
+	command -v pwsh >/dev/null || (echo "pwsh not installed; install browsers manually, see frameworks/playwright-dotnet/README.md" && exit 0)
+	pwsh frameworks/playwright-dotnet/bin/Debug/net6.0/playwright.ps1 install chromium
+
 csharp-test: target-up csharp-build
 	cd frameworks/playwright-dotnet && BASE_URL=http://127.0.0.1:8199 dotnet test --no-build --filter "Category=smoke"
 
@@ -167,9 +172,24 @@ llm-eval:
 ae-test:
 	cd frameworks/automationexercise && AE_LIVE=0 $(PY) -m pytest tests -q
 
-coverage:
-	$(PY) -m pytest apps/demo-target/tests frameworks/api-python contracts/pact/tests observability/tests db-validation/tests ai-selfhealing evals/llm/tests frameworks/automationexercise/tests tools/visual-report/tests --cov --cov-report=xml:coverage.xml --cov-report=term -q || pip install pytest-cov && $(PY) -m pytest apps/demo-target/tests frameworks/api-python contracts/pact/tests observability/tests db-validation/tests --cov --cov-report=xml:coverage.xml -q
-	$(PY) strategy/scripts/coverage_gate.py coverage.xml --min 0.5 || true
+# Per-suite runs in their own dirs (same-basename modules collide in one pytest
+# invocation; some suites also rely on CWD for imports). COVERAGE_FILE keeps
+# one shared data file; --cov-append merges; the last run writes the XML.
+export COVERAGE_FILE := $(CURDIR)/.coverage
+export COVERAGE_RCFILE := $(CURDIR)/.coveragerc
+coverage: target-up
+	$(PY) -c "import pytest_cov" 2>/dev/null || pip install pytest-cov
+	rm -f coverage.xml .coverage .coverage.*
+	cd apps/demo-target && $(PY) -m pytest tests -q --cov=app --cov-append --cov-report=
+	cd frameworks/api-python && $(PY) -m pytest -q --cov=. --cov-append --cov-report=
+	cd contracts/pact && $(PY) -m pytest tests -q --cov=. --cov-append --cov-report=
+	cd observability && $(PY) -m pytest tests -q --cov=. --cov-append --cov-report=
+	cd db-validation && $(PY) -m pytest -q --cov=dbval --cov-append --cov-report=
+	cd ai-selfhealing && PYTHONPATH=. $(PY) -m pytest -q --cov=selfheal --cov-append --cov-report=
+	cd evals/llm && $(PY) -m pytest tests -q --cov=. --cov-append --cov-report=
+	cd frameworks/automationexercise && AE_LIVE=0 $(PY) -m pytest tests -q --cov=. --cov-append --cov-report=
+	$(PY) -m pytest tools/visual-report/tests tools/flakiness-detector/tests strategy/tests -q --cov=tools --cov=strategy --cov-append --cov-report=xml:coverage.xml --cov-report=term
+	$(PY) strategy/scripts/coverage_gate.py coverage.xml --min 0.5
 
 visual-report:
 	$(PY) tools/visual-report/generate.py --junit "frameworks/playwright-ts/junit.xml" --junit "frameworks/api-python/junit.xml" --junit "api/postman-newman/newman-report.xml" --coverage coverage.xml --llm-eval evals/llm/eval-report.json -o reports/visual-report.html || $(PY) tools/visual-report/generate.py -o reports/visual-report.html

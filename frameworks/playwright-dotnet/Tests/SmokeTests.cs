@@ -1,4 +1,6 @@
+using Microsoft.Playwright;
 using Microsoft.Playwright.NUnit;
+using NUnit.Framework;
 using QARonin.PlaywrightDotnet.Pages;
 
 namespace QARonin.PlaywrightDotnet.Tests;
@@ -12,6 +14,12 @@ public class SmokeTests : PageTest
 {
     private static string BaseUrl =>
         Environment.GetEnvironmentVariable("BASE_URL") ?? "http://127.0.0.1:8199";
+
+    [OneTimeSetUp]
+    public async Task AuthenticateOnce() => await AuthSetup.EnsureAsync(BaseUrl);
+
+    public override BrowserNewContextOptions ContextOptions() =>
+        new() { StorageStatePath = AuthSetup.StatePath };
 
     [Test]
     [Category("smoke")]

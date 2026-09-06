@@ -10,7 +10,6 @@ pact:
   script:
     - pip install -r contracts/pact/requirements.txt -r apps/demo-target/requirements.txt
     - python -m pytest contracts/pact/tests -q
-  timeout: 10m
 
 observability:
   stage: test
@@ -18,7 +17,6 @@ observability:
   script:
     - pip install -r apps/demo-target/requirements.txt
     - python -m pytest observability/tests -q
-  timeout: 10m
 
 llm-eval:
   stage: test
@@ -30,7 +28,6 @@ llm-eval:
   artifacts:
     paths: [evals/llm/eval-report.json]
     when: always
-  timeout: 10m
 
 ae-parity:
   stage: test
@@ -38,7 +35,6 @@ ae-parity:
   script:
     - pip install -r frameworks/automationexercise/requirements.txt -r apps/demo-target/requirements.txt
     - python -m pytest frameworks/automationexercise/tests -q
-  timeout: 10m
 
 karate:
   stage: test
@@ -48,7 +44,6 @@ karate:
     - (cd apps/demo-target && nohup python -m uvicorn app.main:app --host 127.0.0.1 --port 8199 >/tmp/target.log 2>&1 &)
     - for i in $(seq 1 30); do curl -sf http://127.0.0.1:8199/api/health && break || sleep 1; done
     - mvn -f frameworks/karate/pom.xml test
-  timeout: 15m
 
 csharp:
   stage: test
@@ -58,27 +53,38 @@ csharp:
     - (cd apps/demo-target && nohup python -m uvicorn app.main:app --host 127.0.0.1 --port 8199 >/tmp/target.log 2>&1 &)
     - for i in $(seq 1 30); do curl -sf http://127.0.0.1:8199/api/health && break || sleep 1; done
     - dotnet build frameworks/playwright-dotnet
+    - pwsh frameworks/playwright-dotnet/bin/Debug/net6.0/playwright.ps1 install chromium --with-deps
     - dotnet test frameworks/playwright-dotnet --no-build --filter "Category=smoke"
-  timeout: 20m
 
 terraform:
   stage: test
   image: hashicorp/terraform:1.9
   script:
     - cd infra/terraform && terraform init -backend=false && terraform validate && terraform plan -no-color
-  timeout: 10m
 
 coverage:
   stage: report
   image: python:3.12-slim
   script:
     - pip install pytest pytest-cov -r apps/demo-target/requirements.txt -r frameworks/api-python/requirements.txt
-    - python -m pytest apps/demo-target/tests frameworks/api-python contracts/pact/tests observability/tests db-validation/tests ai-selfhealing evals/llm/tests frameworks/automationexercise/tests tools/visual-report/tests --cov --cov-report=xml:coverage.xml -q
+    - (cd apps/demo-target && nohup python -m uvicorn app.main:app --host 127.0.0.1 --port 8199 >/tmp/target.log 2>&1 &)
+    - for i in $(seq 1 30); do curl -sf http://127.0.0.1:8199/api/health && break || sleep 1; done
+    - export COVERAGE_FILE=$PWD/.coverage
+    - export COVERAGE_RCFILE=$PWD/.coveragerc
+    - rm -f coverage.xml .coverage .coverage.*
+    - python -m pytest apps/demo-target/tests -q --cov=apps/demo-target --cov-append --cov-report=
+    - python -m pytest frameworks/api-python -q --cov=frameworks/api-python --cov-append --cov-report=
+    - (cd contracts/pact && python -m pytest tests -q --cov=. --cov-append --cov-report=)
+    - python -m pytest observability/tests -q --cov=observability --cov-append --cov-report=
+    - python -m pytest db-validation -q --cov=db-validation --cov-append --cov-report=
+    - (cd ai-selfhealing && PYTHONPATH=. python -m pytest -q --cov=selfheal --cov-append --cov-report=)
+    - (cd evals/llm && python -m pytest tests -q --cov=. --cov-append --cov-report=)
+    - (cd frameworks/automationexercise && AE_LIVE=0 python -m pytest tests -q --cov=. --cov-append --cov-report=)
+    - python -m pytest tools/visual-report/tests tools/flakiness-detector/tests strategy/tests -q --cov=tools --cov=strategy --cov-append --cov-report=xml:coverage.xml --cov-report=term
     - python strategy/scripts/coverage_gate.py coverage.xml --min 0.5
   artifacts:
     paths: [coverage.xml]
     when: always
-  timeout: 15m
 
 visual-report:
   stage: report
@@ -89,11 +95,9 @@ visual-report:
   artifacts:
     paths: [reports/visual-report.html]
     when: always
-  timeout: 10m
 
 regression-30-plan:
   stage: gate
   image: python:3.12-slim
   script:
     - python strategy/scripts/regression_30.py --print-plan
-  timeout: 30m

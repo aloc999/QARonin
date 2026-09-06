@@ -9,8 +9,8 @@ public class LoginPage
 
     public ILocator UsernameInput => _page.Locator("#username");
     public ILocator PasswordInput => _page.Locator("#password");
-    public ILocator SubmitButton => _page.Locator("button[type=submit]");
-    public ILocator ErrorBox => _page.Locator(".error, #error");
+    public ILocator SubmitButton => _page.Locator("#login-form button[type=submit]");
+    public ILocator ErrorBox => _page.Locator("#login-error");
 
     public async Task OpenAsync(string baseUrl) => await _page.GotoAsync($"{baseUrl}/login");
 

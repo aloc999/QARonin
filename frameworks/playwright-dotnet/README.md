@@ -18,8 +18,18 @@ Page Object contract is language-agnostic.
 dotnet restore frameworks/playwright-dotnet
 dotnet build frameworks/playwright-dotnet --no-restore
 BASE_URL=http://127.0.0.1:8199 dotnet test frameworks/playwright-dotnet --no-build --filter "Category=smoke"
-# or: make csharp-test / make csharp-build
+# or: make csharp-install csharp-test
 pwsh frameworks/playwright-dotnet/bin/Debug/net6.0/playwright.ps1 install chromium
 ```
+
+Auth mirrors `playwright-ts/tests/global-setup.ts`: `Tests/AuthSetup.cs` logs
+in via `POST /api/auth/login` once per fixture and writes a storage-state
+file (localStorage `token`/`username`/`role`) consumed through
+`ContextOptions().StorageStatePath`, so UI tests start authenticated.
+
+Note: UI suites (TS and C#) require the demo-target's pinned dependencies
+(`apps/demo-target/requirements.txt`, Starlette 0.x template API). Running the
+target under a newer Starlette breaks `/products` rendering for every
+framework, not just this one.
 
 Tier: L2 UI E2E (C# shard, ~8 min budget). CI job: `csharp-tests`.
