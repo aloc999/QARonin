@@ -224,6 +224,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      - run: pip install pytest
       - name: Flakiness detector smoke run over bundled fixtures
         run: |
           python3 tools/flakiness-detector/flakiness_detector.py \

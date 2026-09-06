@@ -29,6 +29,8 @@ class CartPage(BasePage):
         self.wait.clickable(self.PLACE_ORDER).click()
 
     def order_id_text(self) -> str:
-        text = self.wait.visible(self.ORDER_ID).text
+        # Order round-trip (POST + re-render) gets a 30s conditional wait:
+        # twice timed out on loaded CI runners at the default 10s, never locally.
+        text = self.wait.with_timeout(30).visible(self.ORDER_ID).text
         assert text.startswith("#") and text[1:].isdigit()
         return text

@@ -14,6 +14,11 @@ class Wait:
         self.driver = driver
         self.wait = WebDriverWait(driver, timeout, poll_frequency=0.2)
 
+    def with_timeout(self, seconds: int) -> "Wait":
+        """Longer leash for multi-round-trip flows (e.g. order checkout on
+        loaded CI runners). Still conditional, never a fixed sleep."""
+        return Wait(self.driver, seconds)
+
     def visible(self, locator: tuple[str, str]):
         return self.wait.until(EC.visibility_of_element_located(locator))
 
