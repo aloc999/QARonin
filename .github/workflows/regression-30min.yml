@@ -335,7 +335,7 @@ jobs:
           distribution: temurin
           java-version: "17"
       - name: Gatling simulation
-        run: mvn -f frameworks/karate/pom.xml gatling:test -Pperf -Dgatling.simulationClass=qaronin.RoninShopSimulation
+        run: mvn -f frameworks/karate/pom.xml test-compile gatling:test -Pperf -Dgatling.simulationClass=qaronin.RoninShopSimulation
 
   slack-notify:
     needs: [shard-a-api, pact, karate, shard-b-ts-ui, csharp-tests, terraform, coverage, visual-report, cypress-e2e, bdd-deepeval-mcp, ops-tools, budget-gate-30min]
