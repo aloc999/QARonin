@@ -217,3 +217,115 @@ class TestHealingResultContract:
         result = HealingResult(original_selector="#x", healed_selector=None,
                                confidence=0.0, mode="heuristic")
         assert result.candidates == []
+
+
+class _FakeLocator:
+    """Minimal playwright-locator double: #broken always times out."""
+
+    def __init__(self, page, selector):
+        self._page = page
+        self._selector = selector
+
+    def click(self, **kwargs):
+        self._page.calls.append(("click", self._selector))
+        if self._selector == "#broken":
+            raise TimeoutError("waiting for locator('#broken')")
+
+    def fill(self, value, **kwargs):
+        self._page.calls.append(("fill", self._selector, value))
+        if self._selector == "#broken":
+            raise TimeoutError("waiting for locator('#broken')")
+
+    def text_content(self, **kwargs):
+        return f"text-of-{self._selector}"
+
+
+class _FakePage:
+    def __init__(self, dom=()):
+        self.calls = []
+        self.url = "http://127.0.0.1:8199/cart"
+        self._dom = list(dom)
+
+    def locator(self, selector):
+        return _FakeLocator(self, selector)
+
+    def evaluate(self, _js, limit):
+        return self._dom[:limit]
+
+
+def _resilient_dom():
+    return [{
+        "tag": "button", "id": "place-order-btn", "classes": ["btn"],
+        "attributes": {"data-testid": "checkout-submit"}, "text": "Place order",
+        "position": [412, 640], "parent_tag": "form", "parent_classes": [],
+        "unique": True,
+    }]
+
+
+class _StubHealer:
+    def __init__(self, selector="#place-order-btn", confidence=0.9):
+        self._selector = selector
+        self._confidence = confidence
+
+    def heal(self, failure, dom):
+        assert dom, "healer must see the live DOM snapshot"
+        return HealingResult(original_selector=failure.selector,
+                             healed_selector=self._selector,
+                             confidence=self._confidence, mode="stub",
+                             rationale="stub", candidates=[])
+
+
+class TestResilientLocator:
+    def test_click_success_keeps_original_selector(self):
+        from selfheal.integration.resilient import ResilientLocator
+
+        page = _FakePage()
+        loc = ResilientLocator(page, "#place-order-btn", _StubHealer())
+        loc.click()
+        assert loc.selector_used == "#place-order-btn"
+        assert page.calls == [("click", "#place-order-btn")]
+
+    def test_collect_dom_maps_raw_nodes(self):
+        from selfheal.integration.resilient import collect_dom
+
+        dom = collect_dom(_FakePage(_resilient_dom()))
+        assert len(dom) == 1
+        assert dom[0].id == "place-order-btn"
+        assert dom[0].attributes["data-testid"] == "checkout-submit"
+
+    def test_failure_heals_then_retries_healed_selector(self):
+        from selfheal.integration.resilient import ResilientLocator
+
+        healed = []
+        page = _FakePage(_resilient_dom())
+        loc = ResilientLocator(page, "#broken", _StubHealer(), on_heal=healed.append)
+        loc.click()
+        assert loc.selector_used == "#place-order-btn"
+        assert page.calls == [("click", "#broken"), ("click", "#place-order-btn")]
+        assert len(healed) == 1 and healed[0].healed_selector == "#place-order-btn"
+
+    def test_low_confidence_keeps_selector_and_reraises(self):
+        from selfheal.integration.resilient import ResilientLocator
+
+        page = _FakePage(_resilient_dom())
+        loc = ResilientLocator(page, "#broken", _StubHealer(confidence=0.1),
+                               on_heal=lambda _result: None)
+        with pytest.raises(TimeoutError):
+            loc.click()
+        assert loc.selector_used == "#broken"
+        assert page.calls == [("click", "#broken"), ("click", "#broken")]
+
+    def test_fill_and_text_content(self):
+        from selfheal.integration.resilient import ResilientLocator
+
+        page = _FakePage()
+        loc = ResilientLocator(page, "#card-number", _StubHealer())
+        loc.fill("4242-0000-0000-0000")
+        assert page.calls == [("fill", "#card-number", "4242-0000-0000-0000")]
+        assert loc.text_content() == "text-of-#card-number"
+
+    def test_factory_builds_default_healer(self):
+        from selfheal.integration.resilient import resilient_locator
+
+        loc = resilient_locator(_FakePage(), "#place-order-btn")
+        assert loc.selector_used == "#place-order-btn"

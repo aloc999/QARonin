@@ -1,0 +1,37 @@
+[
+  {
+    "test": "Regression::flaky endpoint eventually succeeds with retry",
+    "bucket": "flaky-infra",
+    "owner": "SDET on-call",
+    "advice": "quarantine candidate: rerun in isolation, then apply flake policy",
+    "excerpt": "Timeout 30000ms exceeded waiting for locator cart-total; stale element detached from DOM\nTimeout 30000ms exceeded waiting for locator cart-total; stale element detached from DOM"
+  },
+  {
+    "test": "Smoke::admin RBAC negative check via UI session",
+    "bucket": "assertion",
+    "owner": "Feature owner",
+    "advice": "read expected-vs-actual; update test or file product bug",
+    "excerpt": "AssertionError: expected user-badge to contain admin got user\nAssertionError: expected user-badge to contain admin got user"
+  },
+  {
+    "test": "E2E::purchase flow creates order",
+    "bucket": "environment",
+    "owner": "Platform",
+    "advice": "check target/browser infra before blaming the test",
+    "excerpt": "Connection refused: POST /api/orders -> 127.0.0.1:8199 unreachable after restart\nConnection refused: POST /api/orders -> 127.0.0.1:8199 unreachable after restart"
+  },
+  {
+    "test": "Visual::product grid matches baseline",
+    "bucket": "assertion",
+    "owner": "Feature owner",
+    "advice": "read expected-vs-actual; update test or file product bug",
+    "excerpt": "Snapshot mismatch: grid-chromium.png differs by 4.2 percent over threshold\nSnapshot mismatch: grid-chromium.png differs by 4.2 percent over threshold"
+  },
+  {
+    "test": "Smoke::logout clears session",
+    "bucket": "needs-human",
+    "owner": "QA lead",
+    "advice": "no rule matched; triage manually",
+    "excerpt": "TypeError: Cannot read property foo of undefined at CartPage line 42\nTypeError: Cannot read property foo of undefined at CartPage line 42"
+  }
+]

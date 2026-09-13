@@ -227,7 +227,7 @@ coverage: target-up
 	cd strategy && $(PY) -m pytest tests -q --cov=. --cov-append --cov-report=
 	$(PY) -m coverage xml -o coverage.xml
 	$(PY) -m coverage report
-	$(PY) strategy/scripts/coverage_gate.py coverage.xml --min 0.5
+	$(PY) strategy/scripts/coverage_gate.py coverage.xml --min 0.8
 
 visual-report:
 	$(PY) tools/visual-report/generate.py --junit "frameworks/playwright-ts/junit.xml" --junit "frameworks/api-python/junit.xml" --junit "api/postman-newman/newman-report.xml" --coverage coverage.xml --llm-eval evals/llm/eval-report.json -o reports/visual-report.html || $(PY) tools/visual-report/generate.py -o reports/visual-report.html

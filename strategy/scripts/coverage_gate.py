@@ -1,7 +1,7 @@
 """Coverage gate: fail when total coverage declines below threshold.
 
 Reads coverage.xml (cobertura, as produced by pytest-cov) and compares
-line-rate against --min (default 0.70). Prints a one-line summary for the
+line-rate against --min (default 0.80). Prints a one-line summary for the
 tier report and exits non-zero on decline.
 """
 
@@ -26,7 +26,7 @@ def line_rate(path: Path) -> float:
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("coverage_xml", type=Path)
-    ap.add_argument("--min", type=float, default=0.70)
+    ap.add_argument("--min", type=float, default=0.80)
     args = ap.parse_args()
     if not args.coverage_xml.exists():
         print(f"coverage gate: {args.coverage_xml} missing -> FAIL")

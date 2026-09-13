@@ -42,7 +42,7 @@ the budgets mechanically.
 | playwright-ts (chromium gate) | 600 | tier_report.py --budget ui=600 |
 | karate | 120 | surefire JUnit + tier_report.py |
 | pact (consumer+provider) | 60 | pytest JUnit |
-| coverage gate | 300 | strategy/scripts/coverage_gate.py --min 0.5 |
+| coverage gate | 300 | strategy/scripts/coverage_gate.py --min 0.8 |
 
 Whole-gate ceiling: **1800s wall clock** enforced by
 strategy/scripts/regression_30.py (`make regression-30`).
