@@ -33,3 +33,37 @@ def test_dry_run_without_key(tmp_path):
     )
     assert r.returncode == 0
     assert "DRY-RUN 3 series" in r.stdout
+
+
+def test_main_dry_run_in_process(tmp_path, monkeypatch, capsys):
+    import datadog_reporter
+
+    monkeypatch.setattr(sys, "argv", ["datadog_reporter.py", "--junit", _junit(tmp_path)])
+    monkeypatch.delenv("DD_API_KEY", raising=False)
+    assert datadog_reporter.main() == 0
+    assert "DRY-RUN 3 series" in capsys.readouterr().out
+
+
+def test_post_ships_series(monkeypatch):
+    import datadog_reporter
+
+    seen = {}
+
+    class FakeRes:
+        status = 202
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *exc):
+            return False
+
+    def fake_urlopen(req, timeout=20):
+        seen["url"] = req.full_url
+        seen["headers"] = {k.lower(): v for k, v in req.header_items()}
+        return FakeRes()
+
+    monkeypatch.setattr(datadog_reporter.urllib.request, "urlopen", fake_urlopen)
+    assert datadog_reporter.post(datadog_reporter.SERIES_URL, "dummy-key", {"series": []}) == 202
+    assert seen["url"] == datadog_reporter.SERIES_URL
+    assert seen["headers"].get("dd-api-key") == "dummy-key"

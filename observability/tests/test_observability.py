@@ -14,7 +14,7 @@ from fastapi.testclient import TestClient  # noqa: E402
 
 from app.main import app  # noqa: E402
 from app.seed import seed  # noqa: E402
-from observability.qaronin_obs import log_event  # noqa: E402
+from observability.qaronin_obs import log_event, span  # noqa: E402
 
 
 def _client():
@@ -42,3 +42,13 @@ def test_structured_log_is_json():
     assert rec["level"] == "info"
     assert rec["suite"] == "observability"
     json.dumps(rec)  # must serialize
+
+
+def test_span_emits_start_and_end(capsys):
+    with span("unit-test-span", suite="observability") as span_id:
+        assert isinstance(span_id, str) and len(span_id) == 16
+    out = capsys.readouterr().out
+    assert "span.start unit-test-span" in out
+    assert "span.end unit-test-span" in out
+    assert "duration_ms" in out
+    json.loads(out.strip().splitlines()[0])  # start record is JSON
