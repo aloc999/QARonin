@@ -1,0 +1,116 @@
+name: post-deploy
+
+# Post-deploy smoke gate for the RoninShop demo-target.
+# Deploy -> readiness probe (/api/health) -> Playwright @smoke on chromium.
+#
+# Providers (pick one per environment via secrets):
+#   fly.io : set FLY_API_TOKEN (+ optionally FLY_APP_NAME, default `qaronin-demo`).
+#            Needs apps/demo-target/fly.toml with internal_port = 8199.
+#   Render : set RENDER_DEPLOY_HOOK_URL (dashboard -> service -> Settings ->
+#            Deploy Hook). The Render service must run
+#            `uvicorn app.main:app --host 0.0.0.0 --port $PORT` with health
+#            check path /api/health.
+# The smoke job runs against TARGET_URL (workflow input, or DEPLOYED_URL
+# secret, or the provider's default URL).
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "apps/demo-target/**"
+      - ".github/workflows/post-deploy.yml"
+  workflow_dispatch:
+    inputs:
+      provider:
+        description: "Deploy provider"
+        required: false
+        default: "fly"
+        type: choice
+        options: [fly, render, skip]
+      target-url:
+        description: "Override deployed base URL (skips provider default)"
+        required: false
+        default: ""
+        type: string
+
+permissions:
+  contents: read
+
+env:
+  FLY_APP_NAME: ${{ secrets.FLY_APP_NAME }}
+  DEPLOYED_URL: ${{ secrets.DEPLOYED_URL }}
+
+jobs:
+  deploy-fly:
+    if: inputs.provider == 'fly' || (inputs.provider == '' && github.event_name == 'push')
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+      - name: Deploy demo-target to Fly.io
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+        run: |
+          [ -n "$FLY_API_TOKEN" ] || { echo "FLY_API_TOKEN not set; skipping fly deploy"; exit 0; }
+          test -f apps/demo-target/fly.toml || {
+            echo "apps/demo-target/fly.toml missing; create it with internal_port = 8199 (see Dockerfile.target)"; exit 1; }
+          flyctl deploy --remote-only --config apps/demo-target/fly.toml \
+            ${FLY_APP_NAME:+--app "$FLY_APP_NAME"}
+
+  deploy-render:
+    if: inputs.provider == 'render'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Trigger Render deploy hook
+        env:
+          RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+        run: |
+          [ -n "$RENDER_DEPLOY_HOOK_URL" ] || { echo "RENDER_DEPLOY_HOOK_URL not set"; exit 1; }
+          curl -sf -X POST "$RENDER_DEPLOY_HOOK_URL"
+
+  smoke-after-deploy:
+    needs: [deploy-fly, deploy-render]
+    if: always() && (needs.deploy-fly.result == 'success' || needs.deploy-fly.result == 'skipped') && (needs.deploy-render.result == 'success' || needs.deploy-render.result == 'skipped')
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      BASE_URL: http://127.0.0.1:8199
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: frameworks/playwright-ts/package-lock.json
+      - name: Resolve target URL
+        run: |
+          URL="${{ inputs.target-url }}"
+          [ -n "$URL" ] || URL="$DEPLOYED_URL"
+          if [ -z "$URL" ] && [ -n "$FLY_APP_NAME" ]; then URL="https://$FLY_APP_NAME.fly.dev"; fi
+          [ -n "$URL" ] || { echo "no target URL: pass target-url input or set DEPLOYED_URL secret"; exit 1; }
+          echo "TARGET_URL=$URL" >> "$GITHUB_ENV"
+          echo "BASE_URL=$URL" >> "$GITHUB_ENV"
+          echo "Probing $URL/api/health"
+      - name: Readiness probe (/api/health)
+        run: |
+          for i in $(seq 1 30); do
+            curl -sf "$TARGET_URL/api/health" && break || sleep 10
+            [ "$i" = 30 ] && { echo "health check failed after 5 min"; exit 1; }
+          done
+          curl -s "$TARGET_URL/api/health"
+      - name: Install dependencies
+        working-directory: frameworks/playwright-ts
+        run: npm ci
+      - name: Install chromium
+        working-directory: frameworks/playwright-ts
+        run: npx playwright install chromium --with-deps
+      - name: Smoke suite vs deployed target (@smoke, chromium)
+        working-directory: frameworks/playwright-ts
+        run: npx playwright test --grep @smoke --project=chromium
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-post-deploy-artifacts
+          path: frameworks/playwright-ts/test-results/

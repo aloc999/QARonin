@@ -141,7 +141,7 @@ coverage:
     - (cd strategy && python -m pytest tests -q --cov=. --cov-append --cov-report=)
     - python -m coverage xml -o coverage.xml
     - python -m coverage report
-    - python strategy/scripts/coverage_gate.py coverage.xml --min 0.5
+    - python strategy/scripts/coverage_gate.py coverage.xml --min 0.8
   artifacts:
     paths: [coverage.xml]
     when: always
