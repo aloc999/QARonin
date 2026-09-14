@@ -33,7 +33,7 @@ const CHECKS: BulkCheck[] = [
     await expect(card(page, p).locator(".price")).toHaveText(p.priceText);
   } },
   { id: "data-price", run: async (page, p) => {
-    await expect(card(page, p)).toHaveAttribute("data-price", String(p.price));
+    await expect(card(page, p)).toHaveAttribute("data-price", p.dataPrice);
   } },
   { id: "button-visible", run: async (page, p) => {
     await expect(card(page, p).locator(".add-to-cart")).toContainText("Add to cart");
