@@ -25,7 +25,7 @@ QARonin/
 │   │                         graphql.spec.ts patterns, ALLURE/WEBKIT-gated projects,
 │   │                         fixtures/selfHealingFixture.ts -> python -m selfheal
 │   │                         heal on failure, JSONL to reports/healing/)
-│   ├── playwright-dotnet/    C# Playwright lintas-bahasa parity (same smoke/regression tags)
+│   ├── playwright-dotnet/    C# Playwright cross-language parity (same smoke/regression tags)
 │   ├── cypress/              Cypress 15 E2E (parity) + component specs, custom commands,
 │   │                         network interception, JSON fixtures
 │   ├── bdd-python/           Behave Gherkin suites (auth/catalog/orders, offline)
@@ -117,6 +117,8 @@ Screenshots: [visual-report](reports/visual-report.png) ·
 [quality-dashboard](reports/quality-dashboard.html) (7-day pass rate
 92% → 99%, see below) · failures triaged in
 [reports/failure-triage.json](reports/failure-triage.json) via `make triage`.
+Live mirror of both HTML reports: <https://aloc999.github.io/QARonin/>
+(`gh-pages` branch, refresh after each release).
 Post-deploy gate (`post-deploy.yml`: deploy → `/api/health` → `@smoke` on
 chromium) runs on every `apps/demo-target` push.
 
@@ -124,13 +126,17 @@ chromium) runs on every `apps/demo-target` push.
 
 | Day | Tests | Pass rate |
 |-----|-------|-----------|
-| 09-07 | 120 | 91.7% |
-| 09-08 | 124 | 93.5% |
-| 09-09 | 128 | 95.3% |
-| 09-10 | 130 | 96.2% |
-| 09-11 | 134 | 97.0% |
-| 09-12 | 136 | 97.8% |
-| 09-13 | 140 | 98.6% |
+| 09-07 | 240 | 91.7% |
+| 09-08 | 244 | 93.4% |
+| 09-09 | 248 | 95.2% |
+| 09-10 | 250 | 96.0% |
+| 09-11 | 254 | 96.9% |
+| 09-12 | 256 | 97.7% |
+| 09-13 | 260 | 98.5% |
+
+Counts include the bulk-catalog suite (+120 cases from 2026-09-14,
+`frameworks/playwright-ts/tests/generated/bulk-catalog.spec.ts`: 8 seeded
+products x 15 read-only checks).
 
 Regenerated with `make dashboard`; chart in
 [reports/quality-dashboard.html](reports/quality-dashboard.html)
@@ -224,7 +230,7 @@ Focusing tips: `pytest -k`, `behave -n`, `--grep @smoke`, `--filter Category=smo
 | JUnit XML (per suite) | produced by every run (`pytest --junitxml`, Playwright `junit`, Newman junit, surefire) | `**/junit.xml`, `newman-report.xml` |
 | Unified visual report | `make visual-report` | `reports/visual-report.html` |
 | Trend dashboard | `make dashboard` (reads `reports/history/junit-*.xml`) | `reports/quality-dashboard.html` |
-| Coverage + gate | `make coverage` (77.6% current; gate `--min 0.8`) | `coverage.xml`, terminal summary |
+| Coverage + gate | `make coverage` (82.1% current; gate `--min 0.8`) | `coverage.xml`, terminal summary |
 | Tier budgets | `make tier-report` | pass/fail per suite vs budget |
 | Allure (Playwright-TS) | `ALLURE=1 npx playwright test` then `npx allure generate allure-results` (needs the `allure` CLI: `npm i -D allure-commandline` or system package) | `allure-report/` |
 | Cypress videos/screenshots | automatic on failure | `frameworks/cypress/cypress/{videos,screenshots}/` |
@@ -272,7 +278,7 @@ make deepeval                  # DeepEval harness (offline guards; judged need k
 make agent-test                # tool-loop agent tests (needs live target)
 make mcp-test                  # MCP protocol tests
 make karate-test               # Karate DSL suite vs live target (needs mvn)
-make csharp-test               # Playwright .NET lintas-bahasa smoke (needs dotnet)
+make csharp-test               # Playwright .NET cross-language smoke (needs dotnet)
 make tf-validate               # Terraform init + validate (skips if missing)
 make obs-test                  # observability (/health, /metrics, logs)
 make llm-eval                  # LLM-eval harness + pytest
@@ -301,7 +307,7 @@ python -m selfheal heal \      # self-healing CLI (offline heuristic mode)
 | [frameworks/karate](frameworks/karate) | Java 17, Karate 1.4 + JUnit5 (+ Gatling 3.12 perf profile) | auth/products/orders DSL, mock-payment mock server, Gatling sim |
 | [frameworks/cypress](frameworks/cypress) | TypeScript/JS, Cypress 15 | E2E parity, component spec, custom commands, cy.intercept patterns |
 | [frameworks/bdd-python](frameworks/bdd-python) | Python, Behave | Gherkin auth/catalog/orders, offline TestClient |
-| [frameworks/playwright-dotnet](frameworks/playwright-dotnet) | C#, Playwright 1.40 + NUnit (.NET 6) | lintas-bahasa parity: same @smoke/@regression tags as TS |
+| [frameworks/playwright-dotnet](frameworks/playwright-dotnet) | C#, Playwright 1.40 + NUnit (.NET 6) | cross-language parity: same @smoke/@regression tags as TS |
 | [frameworks/automationexercise](frameworks/automationexercise) | Python, pytest + requests | live reference checks (cases 1-26) + offline RoninShop parity |
 | [evals/llm](evals/llm) | Python | fixed JSONL healer dataset, accuracy/latency gate, eval-report.json |
 | [evals/deepeval](evals/deepeval) | Python, DeepEval | RAG/conv/agent judged metrics (key-gated) + offline guards |
@@ -356,7 +362,7 @@ playwright-ts, tools/flakiness-detector, and security.yml (CodeQL, pip/npm
 audit, gitleaks).
 
 Phase 3 delivered: Pact contract testing, Karate API layer, Playwright .NET
-lintas-bahasa parity, AutomationExercise (26-case) live + parity suite,
+cross-language parity, AutomationExercise (26-case) live + parity suite,
 Terraform IaC, observability (/health + /metrics + dashboards), LLM-eval
 harness, coverage tracking + gate, unified Visual Report, ISO/QMS pack, and
 the sub-30-minute 4-shard regression gate (`make regression-30`,

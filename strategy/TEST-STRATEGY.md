@@ -141,3 +141,13 @@ Every CI job writes JUnit XML. `make tier-report` parses all reports and
 prints a per-suite duration table, flagging any suite over its declared
 budget. Sample outputs produced from real runs live in
 `strategy/fixtures/`.
+
+## Sprint automation snapshot
+
+| Sprint | New manual cases | Automated | Rate | Notes |
+|--------|-----------------|-----------|------|-------|
+| 23 | 15 | 10 | 66% (10/15) | remaining 5 need live-payment sandbox; carried to Sprint 24 |
+
+New automated cases land in their tier's suite (L1 for API/contract, L2 for
+UI journeys) and must pass `make lint-tests` + the tier budget before the
+sprint closes.
