@@ -27,7 +27,7 @@ nonconformity and enters quarantine within one business day.
 ## 3. Scope
 
 RoninShop demo-target plus all frameworks in this monorepo:
-Playwright-TS, Playwright-C# (lintas bahasa parity), Selenium, Appium,
+Playwright-TS, Playwright-C# (cross-language parity), Selenium, Appium,
 api-python, Karate, Pact, Newman, k6/Locust, db-validation, LLM-eval.
 
 ## 4. Roles

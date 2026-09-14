@@ -71,3 +71,59 @@ class TestOrderLifecycle:
     @pytest.mark.regression
     def test_empty_order_rejected(self, api, auth_headers):
         assert api.post("/api/orders", headers=auth_headers, json={"items": []}).status_code == 422
+
+    @pytest.mark.regression
+    def test_multi_item_total_recomputed_from_catalog(self, api, auth_headers):
+        catalog = {p["id"]: p for p in api.get("/api/products").json()}
+        items = [
+            {"product_id": 1, "quantity": 1},
+            {"product_id": 6, "quantity": 2},
+        ]
+        res = api.post("/api/orders", headers=auth_headers, json={"items": items})
+        assert res.status_code == 201
+        body = res.json()
+        expected = round(sum(catalog[i["product_id"]]["price"] * i["quantity"] for i in items), 2)
+        assert body["total"] == expected
+        assert body["username"] == "demo"
+
+    @pytest.mark.regression
+    def test_order_decrements_stock_exactly(self, api, auth_headers):
+        product_id = 6  # high-stock seed item, safe to mutate
+        before = api.get(f"/api/products/{product_id}").json()["stock"]
+        res = api.post(
+            "/api/orders",
+            headers=auth_headers,
+            json={"items": [{"product_id": product_id, "quantity": 2}]},
+        )
+        assert res.status_code == 201
+        after = api.get(f"/api/products/{product_id}").json()["stock"]
+        assert after == before - 2
+
+    @pytest.mark.regression
+    def test_unknown_product_404_names_it(self, api, auth_headers):
+        res = api.post(
+            "/api/orders",
+            headers=auth_headers,
+            json={"items": [{"product_id": 987654, "quantity": 1}]},
+        )
+        assert res.status_code == 404
+        assert "987654" in res.json()["detail"]
+
+    @pytest.mark.regression
+    def test_zero_quantity_rejected_without_mutation(self, api, auth_headers):
+        product_id = 6
+        before = api.get(f"/api/products/{product_id}").json()["stock"]
+        res = api.post(
+            "/api/orders",
+            headers=auth_headers,
+            json={"items": [{"product_id": product_id, "quantity": 0}]},
+        )
+        assert res.status_code == 409
+        assert api.get(f"/api/products/{product_id}").json()["stock"] == before
+
+    @pytest.mark.regression
+    def test_created_items_echo_catalog_unit_prices(self, api, auth_headers, new_order):
+        catalog = {p["id"]: p for p in api.get("/api/products").json()}
+        for item in new_order["items"]:
+            assert item["unit_price"] == catalog[item["product_id"]]["price"]
+            assert item["quantity"] >= 1
