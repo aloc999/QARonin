@@ -151,3 +151,5 @@ budget. Sample outputs produced from real runs live in
 New automated cases land in their tier's suite (L1 for API/contract, L2 for
 UI journeys) and must pass `make lint-tests` + the tier budget before the
 sprint closes.
+
+Sprint 23: 15 new manual cases -> 10 automated (66%)
