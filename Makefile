@@ -12,7 +12,7 @@ APPIUM_DIR := frameworks/appium-mobile
 FLAKE_DIR := tools/flakiness-detector
 
 .PHONY: help install target-up target-down test-tier-smoke test-tier-api test-tier-ui-e2e \
-        test-tier-regression tier-report selenium-test selfheal-test perf-smoke db-validate \
+        test-tier-regression tier-report selenium-test selfheal-test security-test perf-smoke db-validate \
         appium-collect visual-update flake-check lint-tests ci docker-up docker-test-ui docker-test-api \
         docker-test-api-contracts docker-down clean pact-test karate-test csharp-build \
         csharp-install csharp-test cypress-test cypress-component bdd-test deepeval tf-validate \
@@ -39,6 +39,7 @@ help:
 	@echo "  docker-down          Tear down compose stack"
 	@echo "  selenium-test        Selenium suite (smoke+regression) vs live target"
 	@echo "  selfheal-test        Self-healing engine pytest suite (offline)"
+	@echo "  security-test        Security suite: OWASP A01/A05/A06/A10 + LLM01 (offline-first)"
 	@echo "  perf-smoke           k6 + locust quick load runs vs live target"
 	@echo "  db-validate          DB validation suite against the demo target DB"
 	@echo "  appium-collect       Collect mobile tests (skips unless RUN_APPIUM=1)"
@@ -128,6 +129,9 @@ selenium-test: target-up
 selfheal-test:
 	cd $(SELFHEAL_DIR) && PYTHONPATH=. $(PY) -m pytest
 
+security-test:
+	cd frameworks/security-tests && $(PY) -m pytest
+
 perf-smoke: target-up
 	k6 run $(PERF_K6_DIR)/smoke.js || echo "k6 not installed; see $(PERF_K6_DIR)/README.md"
 	cd $(PERF_LOCUST_DIR) && locust -f locustfile.py --headless -u 5 -r 1 -t 20s \
@@ -212,6 +216,7 @@ coverage: target-up
 	cd evals/llm && $(PY) -m pytest tests -q --cov=. --cov-append --cov-report=
 	cd evals/deepeval && $(PY) -m pytest -q --cov=. --cov-append --cov-report=
 	cd frameworks/automationexercise && AE_LIVE=0 $(PY) -m pytest tests -q --cov=. --cov-append --cov-report=
+	cd frameworks/security-tests && $(PY) -m pytest -q --cov=. --cov-append --cov-report=
 	cd mcp-server && $(PY) -m pytest tests -q --cov=. --cov-append --cov-report=
 	cd ai-agents/tool-loop && $(PY) -m pytest tests -q --cov=. --cov-append --cov-report=
 	cd tools/visual-report && $(PY) -m pytest tests -q --cov=. --cov-append --cov-report=

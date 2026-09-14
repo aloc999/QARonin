@@ -15,6 +15,16 @@ from .auth import create_token, verify_token, TokenError, authenticate_user
 from .seed import seed
 
 app = FastAPI(title="RoninShop", version="1.0.0")
+
+
+@app.middleware("http")
+async def security_headers(request: Request, call_next):
+    """Pinned by frameworks/security-tests/test_a02_misconfig.py: every
+    response carries X-Content-Type-Options: nosniff (MIME-sniffing XSS
+    mitigation). Header-only change: no status/body contract is altered."""
+    response = await call_next(request)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    return response
 _BASE_DIR = Path(__file__).resolve().parent
 app.mount("/static", StaticFiles(directory=_BASE_DIR / "static"), name="static")
 templates = Jinja2Templates(directory=str(_BASE_DIR / "templates"))

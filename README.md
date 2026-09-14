@@ -35,6 +35,8 @@ QARonin/
 │   ├── karate/               Karate DSL API layer (auth/products/orders, mock-payment
 │   │                         mock server, Gatling perf profile, JUnit via Maven)
 │   └── automationexercise/   Live + parity suite vs automationexercise.com/test_cases (26 cases)
+├── frameworks/security-tests/  OWASP A01/A05/A06/A10 + LLM01 pytest suite (offline-first,
+│                               `make security-test`, fail-closed pip-audit gate)
 ├── contracts/pact/           Pact consumer-driven contracts + provider verification
 ├── ai-selfhealing/           Agentic self-healing locator engine (offline heuristics
 │                             + optional LLM agent, CLI, JSONL audit trail)
@@ -241,6 +243,23 @@ Focusing tips: `pytest -k`, `behave -n`, `--grep @smoke`, `--filter Category=smo
 | Quality trend (7-day) | `make dashboard` (reads `reports/history/junit-*.xml`) | `reports/quality-dashboard.html` + [screenshot](reports/quality-dashboard.png) |
 | Self-heal audit trail | automatic on healed failure (`fixtures/selfHealingFixture.ts`) | `reports/healing/healing-*.jsonl` |
 | Post-deploy smoke | `.github/workflows/post-deploy.yml` (deploy → `/api/health` → `@smoke` chromium) | Actions log + `test-results/` on failure |
+
+## Security: OWASP Top 10:2025 mapped (A01-A10) + LLM Top 10:2026 + ZAP + CodeQL + gitleaks
+
+Executable coverage plus scanner jobs (all in `.github/workflows/security.yml`):
+
+| Test / job | Maps to | Status |
+|------------|---------|--------|
+| `frameworks/security-tests/test_a01_broken_access.py` (demo→403, admin→200, anon→401) | A01 Broken Access Control | passing (`make security-test`) |
+| `test_a02_misconfig.py` (`X-Content-Type-Options: nosniff` pinned) | A05 Security Misconfiguration | passing |
+| `test_a03_supply_chain.py` (fail-closed pip-audit gate) | A06 Vulnerable Components | passing (live audit skips offline) |
+| `test_a10_exception.py` (10× `/api/flaky`, no traceback leak) | A10-adjacent error handling | passing |
+| `test_llm01_prompt_injection.py` (injected instruction ignored, heuristic-only) | LLM Top 10:2026 LLM01 Prompt Injection | passing |
+| ZAP baseline, CodeQL (JS+Py, security-extended), pip/npm audit, gitleaks | remaining A02–A09 sweep + secrets | scheduled + per-PR |
+
+Honest limits: pip-audit JSON carries no severity ratings, so A03 fails
+closed on *any* finding (documented in the test); A02 pins only `nosniff`
+today — extend the header set before claiming broader A05 coverage.
 | QMS evidence pack | `make qms-evidence` | `reports/qms-evidence/<stamp>/` + `manifest.json` |
 | LLM evals | `python evals/llm/eval.py` | `evals/llm/eval-report.json` |
 
